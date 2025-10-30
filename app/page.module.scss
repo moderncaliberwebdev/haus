@@ -1,0 +1,215 @@
+@import 'variables';
+@import 'mixins';
+
+.main {
+  min-height: calc(100dvh - 6rem);
+  display: grid;
+  align-items: start;
+}
+
+.heroCard {
+  margin-top: 5rem;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 1.6rem;
+  padding: 2rem 2rem 25rem 2rem;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.15);
+  box-shadow: inset -5px -5px 8px rgba(76, 98, 125, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.title {
+  color: #fff;
+  font-size: $font-small-head;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  text-align: center;
+}
+
+.actions {
+  display: grid;
+  gap: 1.6rem;
+  margin-top: 1.6rem;
+}
+
+.joinCard {
+  margin-top: 3rem;
+  background: #ffffff;
+  color: $dark-blue;
+  border-radius: 1.6rem;
+  padding: 2.4rem;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.2rem;
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 50%;
+  border: none;
+  background: #e7edf5;
+  color: $dark-blue;
+  font-size: 2.2rem;
+  line-height: 3.2rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.joinTitle {
+  color: $primary;
+  font-size: $font-small-head;
+  font-weight: 800;
+  text-align: center;
+}
+
+.joinForm {
+  display: grid;
+  gap: 1.2rem;
+  margin-top: 1.6rem;
+}
+
+.inputGroup {
+  display: grid;
+  gap: 0.6rem;
+
+  span {
+    color: #fff;
+    font-size: $font-text;
+    font-weight: 700;
+  }
+
+  input {
+    padding: 1.2rem 1.4rem;
+    border-radius: 0.8rem;
+    border: 2px solid $primary;
+    font-size: $font-big-text;
+    color: $primary;
+    background: #ffffff;
+    outline: none;
+  }
+}
+
+.errorText {
+  margin-top: 0.6rem;
+  color: #ff6b6b;
+  font-size: $font-small;
+}
+
+.btn {
+  width: 100%;
+  border: none;
+  border-radius: 1.2rem;
+  padding: 1.4rem 2rem;
+  font-size: $font-big-text;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btnLight {
+  background: #e7edf5;
+  color: #2c3a4d;
+}
+
+.btnPrimary {
+  background: $secondary;
+  color: #ffffff;
+}
+.btnBlue {
+  background: $primary;
+  color: #ffffff;
+}
+
+.btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cardCircle {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, 50%);
+  width: min(40rem, 100%);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 15px solid $really-dark-blue;
+  background: $dark-blue;
+}
+
+.startCard {
+  margin-top: 3rem;
+  background: $secondary;
+  color: #fff;
+  border-radius: 1.6rem;
+  padding: 2.4rem;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+.startTitle {
+  color: #fff;
+  font-size: $font-small-head;
+  font-weight: 800;
+  text-align: center;
+}
+
+.joinInfo {
+  margin-top: 1rem;
+  color: #fff;
+  text-align: center;
+  font-size: $font-text;
+  font-weight: 600;
+}
+
+.roomCode {
+  margin-top: 0.6rem;
+  text-align: center;
+  font-size: $font-big-head;
+  font-weight: 900;
+  letter-spacing: 0.6rem;
+  color: #fff;
+}
+
+.waiting {
+  margin: 1.2rem 0;
+  text-align: center;
+  font-size: $font-text;
+  font-weight: 700;
+  color: #fff;
+}
+
+.avatarsRow {
+  margin: 1.2rem 0 1.6rem 0;
+  display: flex;
+  gap: 1.6rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.avatarName {
+  color: #fff;
+  font-size: $font-text;
+  font-weight: 700;
+  text-align: center;
+}
+
+.cardsImg {
+  position: absolute;
+  left: 50%;
+  top: 2rem;
+  transform: translateX(-50%) rotate(-8deg);
+}
+
+.blue {
+  color: $primary;
+}
