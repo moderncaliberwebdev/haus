@@ -25,6 +25,10 @@ export default function GamePage() {
     const storedNickname = localStorage.getItem(`nickname_${gameCode}`)
     if (storedKey) setCurrentPlayerKey(storedKey)
     if (storedNickname) setCurrentPlayerNickname(storedNickname)
+
+    // Update active game info in localStorage
+    localStorage.setItem('activeGameCode', gameCode)
+    localStorage.setItem('activeGameStatus', 'active')
   }, [gameCode])
 
   // Subscribe to players list
@@ -68,7 +72,7 @@ export default function GamePage() {
     }
   }, [players, currentPlayerIndex])
 
-  const imgs = ['/king.png', '/queen.png', '/jack.png']
+  const imgs = ['/king.png', '/queen.png', '/jack.png', 'ace.png']
 
   // If no players, redirect back
   if (players.length === 0) {
@@ -147,7 +151,7 @@ export default function GamePage() {
             }}
           >
             <Image
-              src={imgs[currentPlayerIndex % 3] || '/king.png'}
+              src={imgs[currentPlayerIndex % 3] || '/ace.png'}
               alt={positionedPlayers.bottom.nickname}
               width={80}
               height={80}

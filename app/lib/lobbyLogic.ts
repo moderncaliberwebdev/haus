@@ -82,7 +82,10 @@ export function useLobbyLogic() {
     const gameRef = ref(db, `games/${roomCode}`)
     const unsub = onValue(gameRef, (snap) => {
       const data = snap.val()
-      setGameStatus(data?.status || 'lobby')
+      const status = data?.status || 'lobby'
+      setGameStatus(status)
+      // Update localStorage when game status changes
+      localStorage.setItem('activeGameStatus', status)
     })
     return () => off(gameRef)
   }, [hosting, roomCode])
@@ -93,7 +96,10 @@ export function useLobbyLogic() {
     const gameRef = ref(db, `games/${joinCode}`)
     const unsub = onValue(gameRef, (snap) => {
       const data = snap.val()
-      setGameStatus(data?.status || 'lobby')
+      const status = data?.status || 'lobby'
+      setGameStatus(status)
+      // Update localStorage when game status changes
+      localStorage.setItem('activeGameStatus', status)
     })
     return () => off(gameRef)
   }, [hasJoined, joinCode])
@@ -115,14 +121,22 @@ export function useLobbyLogic() {
     setJoining(false)
     const gameRef = ref(db, `games/${code}`)
     await set(gameRef, { createdAt: serverTimestamp(), status: 'lobby' })
-    // Store host info in localStorage (host will be first player)
+    // Store host info in localStorage for rejoin
     if (nickname.trim()) {
       localStorage.setItem(`nickname_${code}`, nickname)
     }
+    // Store active game info for rejoin
+    localStorage.setItem('activeGameCode', code)
+    localStorage.setItem('activeGameRole', 'host')
+    localStorage.setItem('activeGameStatus', 'lobby')
   }
 
   async function closeHost() {
     if (roomCode) await remove(ref(db, `games/${roomCode}`))
+    // Clear active game from localStorage
+    localStorage.removeItem('activeGameCode')
+    localStorage.removeItem('activeGameRole')
+    localStorage.removeItem('activeGameStatus')
     setHosting(false)
     setRoomCode('')
     setPlayersCount(0)
@@ -161,6 +175,8 @@ export function useLobbyLogic() {
       status: 'active',
       startedAt: serverTimestamp(),
     })
+    // Update game status in localStorage
+    localStorage.setItem('activeGameStatus', 'active')
     // Navigation will be handled by the component
     return roomCode
   }
@@ -189,11 +205,21 @@ export function useLobbyLogic() {
     const playerKey = newRef.key || ''
     await set(newRef, { nickname, joinedAt: serverTimestamp() })
     setPlayerKey(playerKey)
-    // Store in localStorage for game page
+    // Store in localStorage for game page and rejoin
     if (playerKey) {
       localStorage.setItem(`playerKey_${joinCode}`, playerKey)
       localStorage.setItem(`nickname_${joinCode}`, nickname)
     }
+    // Store active game info for rejoin
+    localStorage.setItem('activeGameCode', joinCode)
+    localStorage.setItem('activeGameRole', 'joiner')
+    // Check current game status
+    const gameRef = ref(db, `games/${joinCode}`)
+    const gameSnap = await get(gameRef)
+    const gameData = gameSnap.val()
+    const gameStatus = gameData?.status || 'lobby'
+    localStorage.setItem('activeGameStatus', gameStatus)
+
     setHasJoined(true)
     setJoinError('')
   }
@@ -201,10 +227,57 @@ export function useLobbyLogic() {
   async function closeJoin() {
     if (playerKey && joinCode)
       await remove(ref(db, `games/${joinCode}/players/${playerKey}`))
+    // Clear active game from localStorage
+    localStorage.removeItem('activeGameCode')
+    localStorage.removeItem('activeGameRole')
+    localStorage.removeItem('activeGameStatus')
     setPlayerKey('')
     setJoining(false)
     setHasJoined(false)
   }
+
+  // Auto-rejoin on page load
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const activeGameCode = localStorage.getItem('activeGameCode')
+    const activeGameRole = localStorage.getItem('activeGameRole')
+    const activeGameStatus = localStorage.getItem('activeGameStatus')
+
+    if (!activeGameCode || !activeGameRole) return
+
+    // If game is active, redirect to game page immediately
+    if (activeGameStatus === 'active') {
+      // Check if we're already on the game page
+      if (!window.location.pathname.startsWith(`/game/${activeGameCode}`)) {
+        window.location.href = `/game/${activeGameCode}`
+      }
+      return
+    }
+
+    // If game is in lobby, rejoin them to the lobby
+    if (activeGameStatus === 'lobby') {
+      if (activeGameRole === 'host') {
+        const storedNickname =
+          localStorage.getItem(`nickname_${activeGameCode}`) || ''
+        setRoomCode(activeGameCode)
+        setHosting(true)
+        setNickname(storedNickname)
+      } else {
+        const storedNickname =
+          localStorage.getItem(`nickname_${activeGameCode}`) || ''
+        const storedPlayerKey = localStorage.getItem(
+          `playerKey_${activeGameCode}`
+        )
+        setJoinCode(activeGameCode)
+        setNickname(storedNickname)
+        if (storedPlayerKey) {
+          setPlayerKey(storedPlayerKey)
+          setHasJoined(true)
+        }
+      }
+    }
+  }, []) // Run once on mount
 
   return {
     // state
