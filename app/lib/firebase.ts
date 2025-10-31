@@ -1,5 +1,9 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app'
-import { getDatabase } from 'firebase/database'
+import {
+  getDatabase,
+  connectDatabaseEmulator,
+  goOnline,
+} from 'firebase/database'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY as string,
@@ -15,4 +19,12 @@ const firebaseConfig = {
 const app: FirebaseApp = getApps().length
   ? getApps()[0]!
   : initializeApp(firebaseConfig)
+
 export const db = getDatabase(app)
+
+// Ensure database stays online and maintains connection
+// Realtime Database has offline persistence enabled by default,
+// but we explicitly ensure it stays online
+if (typeof window !== 'undefined') {
+  goOnline(db)
+}

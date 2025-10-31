@@ -9,13 +9,28 @@ type Props = {
   playerNames: string[]
   codeText: string
   onClose: () => void
+  onStartGame: () => Promise<void>
 }
 
-export function StartCard({ roomCode, nickname, setNickname, playersCount, playerNames, codeText, onClose }: Props) {
+export function StartCard({
+  roomCode,
+  nickname,
+  setNickname,
+  playersCount,
+  playerNames,
+  codeText,
+  onClose,
+  onStartGame,
+}: Props) {
   const imgs = ['/king.png', '/queen.png', '/jack.png']
   return (
     <div className={styles.startCard}>
-      <button className={styles.closeBtn} aria-label='Close start card' type='button' onClick={onClose}>
+      <button
+        className={styles.closeBtn}
+        aria-label='Close start card'
+        type='button'
+        onClick={onClose}
+      >
         ×
       </button>
       <h2 className={styles.startTitle}>Join at hausnow.club</h2>
@@ -25,7 +40,12 @@ export function StartCard({ roomCode, nickname, setNickname, playersCount, playe
       <div className={styles.joinForm}>
         <label className={styles.inputGroup}>
           <span>Enter Nickname</span>
-          <input type='text' placeholder='Your name' value={nickname} onChange={(e) => setNickname(e.target.value)} />
+          <input
+            type='text'
+            placeholder='Your name'
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+          />
         </label>
       </div>
 
@@ -34,17 +54,24 @@ export function StartCard({ roomCode, nickname, setNickname, playersCount, playe
       <div className={styles.avatarsRow}>
         {playerNames.slice(0, 3).map((name, idx) => (
           <div className={styles.avatarItem} key={idx}>
-            <Image src={imgs[idx]} alt={`player ${idx + 1}`} width={64} height={64} />
+            <Image
+              src={imgs[idx]}
+              alt={`player ${idx + 1}`}
+              width={64}
+              height={64}
+            />
             <div className={styles.avatarName}>{name}</div>
           </div>
         ))}
       </div>
 
-      <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={playersCount < 3 || !nickname.trim()}>
+      <button
+        className={`${styles.btn}`}
+        disabled={playersCount < 3 || !nickname.trim()}
+        onClick={onStartGame}
+      >
         Start Game Now
       </button>
     </div>
   )
 }
-
-

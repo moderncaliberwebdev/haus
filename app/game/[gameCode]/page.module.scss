@@ -1,0 +1,40 @@
+@import '../../_variables';
+@import '../../_mixins';
+
+.main {
+  min-height: calc(100dvh - 6rem);
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  position: relative;
+}
+
+.gameContainer {
+  position: relative;
+  width: 100%;
+  height: calc(100dvh - 6rem);
+  max-width: 120rem;
+}
+
+.playerPosition {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.playerName {
+  color: #fff;
+  font-size: $font-text;
+  font-weight: 700;
+  text-align: center;
+}
+
+.loading {
+  color: #fff;
+  font-size: $font-text;
+  font-weight: 600;
+  text-align: center;
+}
+

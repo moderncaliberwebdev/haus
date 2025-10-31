@@ -1,4 +1,6 @@
 'use client'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import styles from './page.module.scss'
 import { HeroCard } from './components/HeroCard'
 import { JoinCard } from './components/JoinCard'
@@ -6,6 +8,7 @@ import { StartCard } from './components/StartCard'
 import { useLobbyLogic } from './lib/lobbyLogic'
 
 export default function Home() {
+  const router = useRouter()
   const {
     joining,
     hosting,
@@ -18,6 +21,7 @@ export default function Home() {
     joinError,
     hostDisconnected,
     codeText,
+    gameStatus,
     setJoining,
     setJoinCode,
     setNickname,
@@ -25,7 +29,25 @@ export default function Home() {
     joinGame,
     closeJoin,
     closeHost,
+    startGameSession,
   } = useLobbyLogic()
+
+  async function handleStartGame() {
+    const code = await startGameSession()
+    if (code) {
+      router.push(`/game/${code}`)
+    }
+  }
+
+  // Auto-navigate players when game starts
+  useEffect(() => {
+    if (gameStatus === 'active') {
+      const code = hosting ? roomCode : joinCode
+      if (code) {
+        router.push(`/game/${code}`)
+      }
+    }
+  }, [gameStatus, hosting, roomCode, joinCode, router])
 
   return (
     <main className={styles.main}>
@@ -54,6 +76,7 @@ export default function Home() {
           playerNames={playerNames}
           codeText={codeText}
           onClose={closeHost}
+          onStartGame={handleStartGame}
         />
       )}
     </main>
