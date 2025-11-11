@@ -1,0 +1,121 @@
+@import '../_variables.scss';
+
+.trumpSelectionBox {
+  position: absolute;
+  bottom: 25vh;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: $secondary;
+  padding: 2rem 3rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  width: 100%;
+  max-width: 500px;
+}
+
+.trumpQuestion {
+  font-size: $font-big-text;
+  color: white;
+  text-align: center;
+  margin-bottom: 2rem;
+  font-weight: 600;
+}
+
+.suitButtons {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  width: 100%;
+}
+
+.suitButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 1.5rem 1rem;
+  border: 3px solid transparent;
+  border-radius: 0.8rem;
+  font-size: $font-text;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-color: currentColor;
+  }
+
+  &:active {
+    transform: translateY(-2px);
+  }
+}
+
+.suitIcon {
+  font-size: $font-massive-head;
+  line-height: 1;
+}
+
+.suitName {
+  font-size: $font-text;
+  color: $dark-blue;
+}
+
+// Suit-specific colors
+.suit-hearts {
+  color: #dc2626; // Red
+
+  &:hover {
+    border-color: #dc2626;
+  }
+}
+
+.suit-diamonds {
+  color: #dc2626; // Red
+
+  &:hover {
+    border-color: #dc2626;
+  }
+}
+
+.suit-clubs {
+  color: #111827; // Black
+
+  &:hover {
+    border-color: #111827;
+  }
+}
+
+.suit-spades {
+  color: #111827; // Black
+
+  &:hover {
+    border-color: #111827;
+  }
+}
+
+.waitingBox {
+  position: absolute;
+  bottom: 25vh;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(186, 123, 161, 0.9);
+  padding: 2rem 3rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  width: 100%;
+  max-width: 500px;
+}
+
+.waitingText {
+  font-size: $font-text;
+  color: white;
+  text-align: center;
+  font-weight: 600;
+}

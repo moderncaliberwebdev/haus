@@ -150,6 +150,7 @@ export function useLobbyLogic() {
     const existingPlayers = playersSnap.val() || {}
 
     // Check if host already has a player entry
+    let hostKey = ''
     const hostExists = Object.values(existingPlayers).some(
       (p: any) =>
         String(p?.nickname || '')
@@ -160,20 +161,71 @@ export function useLobbyLogic() {
     if (!hostExists) {
       // Add host as first player
       const newRef = push(playersRef)
-      const hostKey = newRef.key || ''
+      hostKey = newRef.key || ''
       await set(newRef, { nickname, joinedAt: serverTimestamp(), isHost: true })
       setPlayerKey(hostKey)
       if (hostKey) {
         localStorage.setItem(`playerKey_${roomCode}`, hostKey)
         localStorage.setItem(`nickname_${roomCode}`, nickname)
       }
+    } else {
+      // Find existing host key
+      const hostEntry = Object.entries(existingPlayers).find(
+        ([key, p]: [string, any]) =>
+          String(p?.nickname || '')
+            .trim()
+            .toLowerCase() === nickname.trim().toLowerCase()
+      )
+      if (hostEntry) {
+        hostKey = hostEntry[0]
+        setPlayerKey(hostKey)
+      }
     }
+
+    // Assign roles to all players at game start
+    // If host was just added, we need to refresh the players list
+    const updatedPlayersSnap = await get(playersRef)
+    const allPlayersData = updatedPlayersSnap.val() || {}
+    const allPlayerEntries = Object.entries(allPlayersData)
+
+    // Sort players by key to maintain consistent order across all clients
+    allPlayerEntries.sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+
+    // Assign roles: host (isHost: true) gets king, others get queen, jack, ace in order
+    const roles = ['king', 'queen', 'jack', 'ace']
+    const updates: Record<string, any> = {}
+    let roleIndex = 1 // Start at 1 because host (index 0) gets king
+
+    for (const [playerKey, playerData] of allPlayerEntries) {
+      const player = playerData as any
+      if (player?.isHost) {
+        // Host always gets king
+        updates[`${playerKey}/role`] = 'king'
+      } else {
+        // Other players get roles in order: queen, jack, ace
+        updates[`${playerKey}/role`] = roles[roleIndex] || 'ace'
+        roleIndex++
+      }
+    }
+
+    // Update all players with their roles in Firebase
+    await update(playersRef, updates)
+
+    // Find host key to set as initial dealer
+    const finalPlayersSnap = await get(playersRef)
+    const finalPlayersData = finalPlayersSnap.val() || {}
+    const finalPlayerEntries = Object.entries(finalPlayersData)
+    const hostEntry = finalPlayerEntries.find(
+      ([key, p]: [string, any]) => p?.isHost === true
+    )
+    const initialDealerKey = hostEntry ? hostEntry[0] : ''
 
     const gameRef = ref(db, `games/${roomCode}`)
     // Use update() instead of set() to preserve existing data (like players)
     await update(gameRef, {
       status: 'active',
       startedAt: serverTimestamp(),
+      dealerKey: initialDealerKey, // Set host as initial dealer
     })
     // Update game status in localStorage
     localStorage.setItem('activeGameStatus', 'active')
