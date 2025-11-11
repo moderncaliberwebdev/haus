@@ -19,7 +19,6 @@ export async function submitTrumpSelection(
     await update(gameRef, {
       phase: 'card-exchange', // Next phase depends on bid type
       trump: null, // Ace Haus has no trump
-      biddingWinner: null, // Clear this
       cardExchange: {}, // Initialize card exchange state
     })
   } else {
@@ -35,7 +34,6 @@ export async function submitTrumpSelection(
       trump: trumpSelection.trump,
       rightBar: trumpSelection.rightBar,
       leftBar: trumpSelection.leftBar,
-      biddingWinner: null, // Clear this
     }
 
     // Initialize card exchange state if needed

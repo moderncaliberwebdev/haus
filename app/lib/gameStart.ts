@@ -159,6 +159,7 @@ export function getCurrentPlayerIndex(
 
 /**
  * Get positioned players: current at bottom, others at left, top, right
+ * Orders players clockwise starting from current player
  */
 export function getPositionedPlayers(
   players: Player[],
@@ -168,13 +169,15 @@ export function getPositionedPlayers(
     return { bottom: null, left: null, top: null, right: null }
 
   const currentPlayer = players[currentPlayerIndex]
-  const otherPlayers = players.filter((_, idx) => idx !== currentPlayerIndex)
+  const numPlayers = players.length
 
+  // Order players clockwise: current at bottom, then left, top, right
+  // For 4 players: bottom = i, left = (i+1)%4, top = (i+2)%4, right = (i+3)%4
   return {
     bottom: currentPlayer, // Current player at bottom
-    left: otherPlayers[0] || null, // Next player on left
-    top: otherPlayers[1] || null, // Next player on top
-    right: otherPlayers[2] || null, // Next player on right
+    left: players[(currentPlayerIndex + 1) % numPlayers] || null, // Next player clockwise (left)
+    top: players[(currentPlayerIndex + 2) % numPlayers] || null, // Two positions ahead (top)
+    right: players[(currentPlayerIndex + 3) % numPlayers] || null, // Three positions ahead (right)
   }
 }
 
