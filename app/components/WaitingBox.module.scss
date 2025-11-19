@@ -1,0 +1,18 @@
+@import '../_variables.scss';
+
+.waitingBox {
+  background-color: rgba(186, 123, 161, 0.9);
+  padding: 2rem 3rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  width: 100%;
+  max-width: 500px;
+}
+
+.waitingText {
+  font-size: $font-text;
+  color: white;
+  text-align: center;
+  font-weight: 600;
+}

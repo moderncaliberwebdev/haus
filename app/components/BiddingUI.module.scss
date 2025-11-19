@@ -1,16 +1,6 @@
 @import '../_variables.scss';
 
 .biddingBox {
-  position: absolute;
-  // Position 2rem above the top of the card hand
-  // Card hand is positioned with bottom: 100% relative to playerPositionBottom
-  // Cards extend upward from there with max-height: 8rem
-  // Card hand has margin-bottom: 1rem
-  // We position at: max card height (8rem) + margin (1rem) + spacing (2rem) = 11rem from bottom
-  // This keeps it 2rem above the tallest cards regardless of screen size
-  bottom: 11rem;
-  left: 50%;
-  transform: translateX(-50%);
   background-color: $secondary;
   padding: 1rem 1.5rem;
   border-radius: 0.8rem;
@@ -18,13 +8,6 @@
   z-index: 1000;
   width: 100%;
   max-width: 600px;
-
-  // For responsive positioning when cards are smaller than 8rem
-  @media (max-width: 800px) {
-    // On smaller screens, cards might be less than 8rem tall
-    // Use a more flexible calculation that adapts
-    bottom: calc(min(6vw / 0.714, 8rem) + 15rem);
-  }
 }
 
 .biddingQuestion {

@@ -1,10 +1,6 @@
 @import '../_variables.scss';
 
 .exchangeBox {
-  position: absolute;
-  bottom: 25vh;
-  left: 50%;
-  transform: translateX(-50%);
   background-color: $secondary;
   padding: 2rem 3rem;
   border-radius: 1rem;
@@ -153,23 +149,3 @@
   opacity: 0.6;
 }
 
-.waitingBox {
-  position: absolute;
-  bottom: 25vh;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(186, 123, 161, 0.9);
-  padding: 2rem 3rem;
-  border-radius: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-  width: 100%;
-  max-width: 500px;
-}
-
-.waitingText {
-  font-size: $font-text;
-  color: white;
-  text-align: center;
-  font-weight: 600;
-}

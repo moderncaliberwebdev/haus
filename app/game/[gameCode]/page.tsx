@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
+import { ref, get, update } from 'firebase/database'
+import { db } from '../../lib/firebase'
 import styles from './page.module.scss'
 import { getCardImagePath, type Card, handleDeal } from '../../lib/dealLogic'
 import {
@@ -20,6 +22,7 @@ import {
 import BiddingUI from '../../components/BiddingUI'
 import TrumpSelectionUI from '../../components/TrumpSelectionUI'
 import CardExchangeUI from '../../components/CardExchangeUI'
+import TrickUI from '../../components/TrickUI'
 import {
   type Bid,
   type BidType,
@@ -36,8 +39,20 @@ import {
   areBothPlayersReady,
   completeCardExchange,
 } from '../../lib/cardExchangeState'
+import {
+  submitCardPlay,
+  parseTrickFromFirebase,
+  startFirstTrick,
+  startNextTrick,
+} from '../../lib/trickState'
+import {
+  getValidCardsForPlayer,
+  canPlayerPlayCard,
+  areAllTricksComplete,
+} from '../../lib/trickLogic'
 import { isSpecialBid } from '../../lib/specialBidLogic'
 import { type Suit } from '../../lib/dealLogic'
+import { type Trick } from '../../lib/trickLogic'
 
 export default function GamePage() {
   const params = useParams()
@@ -58,6 +73,11 @@ export default function GamePage() {
   const [biddingWinnerKey, setBiddingWinnerKey] = useState<string | null>(null)
   const [trump, setTrump] = useState<string | null>(null)
   const [cardExchangeState, setCardExchangeState] = useState<any>(null)
+  const [currentTrick, setCurrentTrick] = useState<Trick | null>(null)
+  const [currentPlayer, setCurrentPlayer] = useState<string | null>(null)
+  const [sittingOutPlayerKey, setSittingOutPlayerKey] = useState<string | null>(
+    null
+  )
 
   // Use extracted hooks
   useGameExistenceCheck(gameCode)
@@ -70,7 +90,10 @@ export default function GamePage() {
     setBiddingState,
     setBiddingWinnerKey,
     setTrump,
-    setCardExchangeState
+    setCardExchangeState,
+    setCurrentTrick,
+    setCurrentPlayer,
+    setSittingOutPlayerKey
   )
   usePlayersList(gameCode, setPlayers)
 
@@ -106,6 +129,8 @@ export default function GamePage() {
       setBids(parsedBids)
     }
   }, [biddingState])
+
+  // Note: currentTrick is already parsed by useGameState, no need to parse again
 
   // Start bidding phase when deal completes
   useEffect(() => {
@@ -184,7 +209,12 @@ export default function GamePage() {
 
   // Handle trump selection
   const handleTrumpSelection = async (trumpSuit: Suit) => {
-    await submitTrumpSelection(gameCode, trumpSuit, winningBid)
+    await submitTrumpSelection(
+      gameCode,
+      trumpSuit,
+      winningBid,
+      biddingWinnerKey || ''
+    )
   }
 
   // Get current player's hand
@@ -205,6 +235,23 @@ export default function GamePage() {
   // Handle card exchange submission
   const handleCardExchange = async (cards: Card[]) => {
     await submitCardsForExchange(gameCode, currentPlayerKey, cards)
+  }
+
+  // Handle card play in trick
+  const handleCardPlay = async (card: Card) => {
+    if (currentPlayerKey !== currentPlayer) return
+    // currentTrick can be null for the first card of the first trick
+    await submitCardPlay(
+      gameCode,
+      currentPlayerKey,
+      currentPlayerIndex,
+      card,
+      currentTrick,
+      trump as Suit | null,
+      biddingWinnerKey || '',
+      players,
+      sittingOutPlayerKey
+    )
   }
 
   // Check if both players are ready and complete exchange
@@ -241,6 +288,47 @@ export default function GamePage() {
     players,
   ])
 
+  // Handle trick completion: show winner for 3 seconds, then start next trick
+  useEffect(() => {
+    if (
+      gamePhase === 'trick-playing' &&
+      currentTrick &&
+      currentTrick.winnerIndex !== null &&
+      currentTrick.winnerPlayerKey &&
+      currentPlayer === null // Trick is complete, play is paused
+    ) {
+      const timer = setTimeout(async () => {
+        // Check if all tricks are complete
+        const tricksRef = ref(db, `games/${gameCode}/tricks`)
+        const tricksSnap = await get(tricksRef)
+        const allTricks = tricksSnap.val() || {}
+        const tricksArray: Trick[] = Object.values(allTricks) as Trick[]
+        const allComplete = areAllTricksComplete(tricksArray)
+
+        if (allComplete) {
+          // Move to scoring phase
+          const gameRef = ref(db, `games/${gameCode}`)
+          await update(gameRef, {
+            phase: 'scoring',
+            currentTrick: null,
+            currentPlayer: null,
+          })
+        } else {
+          // Start the next trick after 3 seconds
+          if (currentTrick.winnerPlayerKey) {
+            startNextTrick(gameCode, currentTrick.winnerPlayerKey).catch(
+              (err) => {
+                console.error('Error starting next trick:', err)
+              }
+            )
+          }
+        }
+      }, 3000) // 3 second delay
+
+      return () => clearTimeout(timer)
+    }
+  }, [gamePhase, currentTrick, currentPlayer, gameCode])
+
   // If no players, redirect back
   if (players.length === 0) {
     return (
@@ -253,254 +341,317 @@ export default function GamePage() {
   return (
     <main className={styles.main}>
       <div className={styles.gameContainer}>
-        {/* Top Player */}
-        {positionedPlayers.top && (
-          <div
-            className={`${styles.playerPosition} ${styles.playerPositionTop}`}
-          >
-            {/* Cards */}
-            {getHandForPositionLocal('top').length > 0 && (
-              <div className={`${styles.cardHand} ${styles.cardHandTop}`}>
-                {getHandForPositionLocal('top').map((card, idx) => (
-                  <div
-                    key={card.id}
-                    className={`${styles.card} ${styles.cardTop}`}
-                    style={{
-                      transform: `translateX(${(idx - 3.5) * 2.5}%)`,
-                      zIndex: idx,
-                    }}
-                  >
-                    <Image
-                      src='/Card Back.png'
-                      alt='Card back'
-                      fill
-                      className={styles.cardImage}
-                    />
-                  </div>
-                ))}
+        {/* Row 1: Top Player */}
+        <div className={styles.row1}>
+          {positionedPlayers.top && (
+            <div className={styles.playerPosition}>
+              <Image
+                src={getImageFromRole(positionedPlayers.top.role)}
+                alt={positionedPlayers.top.nickname}
+                width={80}
+                height={80}
+                className={styles.avatar}
+              />
+              <div className={styles.playerName}>
+                {positionedPlayers.top.nickname}
               </div>
-            )}
-            <Image
-              src={getImageFromRole(positionedPlayers.top.role)}
-              alt={positionedPlayers.top.nickname}
-              width={80}
-              height={80}
-              className={styles.avatar}
-            />
-            <div className={styles.playerName}>
-              {positionedPlayers.top.nickname}
+              {/* Cards */}
+              {getHandForPositionLocal('top').length > 0 && (
+                <div className={`${styles.cardHand} ${styles.cardHandTop}`}>
+                  {getHandForPositionLocal('top').map((card, idx) => (
+                    <div
+                      key={card.id}
+                      className={`${styles.card} ${styles.cardTop}`}
+                      style={{
+                        transform: `translateX(${(idx - 3.5) * 2.5}%)`,
+                        zIndex: idx,
+                      }}
+                    >
+                      <Image
+                        src='/Card Back.png'
+                        alt='Card back'
+                        fill
+                        className={styles.cardImage}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        )}
-
-        {/* Left Player */}
-        {positionedPlayers.left && (
-          <div
-            className={styles.playerPosition}
-            style={{ left: '2%', top: '50%', transform: 'translateY(-50%)' }}
-          >
-            {/* Cards */}
-            {getHandForPositionLocal('left').length > 0 && (
-              <div className={`${styles.cardHand} ${styles.cardHandLeft}`}>
-                {getHandForPositionLocal('left').map((card, idx) => (
-                  <div
-                    key={card.id}
-                    className={`${styles.card} ${styles.cardLeft}`}
-                    style={{
-                      transform: `rotate(90deg)`,
-                      zIndex: idx,
-                    }}
-                  >
-                    <Image
-                      src='/Card Back.png'
-                      alt='Card back'
-                      fill
-                      className={styles.cardImage}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-            <Image
-              src={getImageFromRole(positionedPlayers.left.role)}
-              alt={positionedPlayers.left.nickname}
-              width={80}
-              height={80}
-              className={styles.avatar}
-            />
-            <div className={styles.playerName}>
-              {positionedPlayers.left.nickname}
-            </div>
-          </div>
-        )}
-
-        {/* Right Player */}
-        {positionedPlayers.right && (
-          <div
-            className={styles.playerPosition}
-            style={{ right: '2%', top: '50%', transform: 'translateY(-50%)' }}
-          >
-            {/* Cards */}
-            {getHandForPositionLocal('right').length > 0 && (
-              <div className={`${styles.cardHand} ${styles.cardHandRight}`}>
-                {getHandForPositionLocal('right').map((card, idx) => (
-                  <div
-                    key={card.id}
-                    className={`${styles.card} ${styles.cardRight}`}
-                    style={{
-                      transform: `rotate(-90deg)`,
-                      zIndex: idx,
-                    }}
-                  >
-                    <Image
-                      src='/Card Back.png'
-                      alt='Card back'
-                      fill
-                      className={styles.cardImage}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-            <Image
-              src={getImageFromRole(positionedPlayers.right.role)}
-              alt={positionedPlayers.right.nickname}
-              width={80}
-              height={80}
-              className={styles.avatar}
-            />
-            <div className={styles.playerName}>
-              {positionedPlayers.right.nickname}
-            </div>
-          </div>
-        )}
-
-        {/* Bottom Player (Current Player) */}
-        {positionedPlayers.bottom && (
-          <div
-            className={`${styles.playerPosition} ${styles.playerPositionBottom}`}
-          >
-            {/* Cards - Show face up for current player */}
-            {getHandForPositionLocal('bottom').length > 0 && (
-              <div className={`${styles.cardHand} ${styles.cardHandBottom}`}>
-                {getHandForPositionLocal('bottom').map((card, idx) => (
-                  <div
-                    key={card.id}
-                    className={`${styles.card} ${styles.cardBottom}`}
-                    style={{
-                      transform: `translateX(${(idx - 3.5) * 3.5}%)`,
-                      zIndex: idx,
-                    }}
-                  >
-                    <Image
-                      src={getCardImagePath(card)}
-                      alt={`${card.rank} of ${card.suit}`}
-                      fill
-                      className={styles.cardImage}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-            <Image
-              src={getImageFromRole(positionedPlayers.bottom.role)}
-              alt={positionedPlayers.bottom.nickname}
-              width={80}
-              height={80}
-              className={styles.avatar}
-            />
-            <div className={styles.playerName}>
-              {positionedPlayers.bottom.nickname}
-            </div>
-          </div>
-        )}
-
-        {/* Bidding UI - Show during bidding phase */}
-        {gamePhase === 'bidding' && currentBidderKey && (
-          <BiddingUI
-            currentBidderKey={currentBidderKey}
-            currentPlayerKey={currentPlayerKey}
-            bids={bids}
-            players={players}
-            positionedPlayers={positionedPlayers}
-            dealerIndex={dealerIndex}
-            onBid={handleBid}
-          />
-        )}
-
-        {/* Trump Selection UI - Show during trump selection phase */}
-        {gamePhase === 'trump-selection' &&
-          biddingWinnerKey &&
-          winningBid !== 'ace-haus' && (
-            <TrumpSelectionUI
-              biddingWinnerKey={biddingWinnerKey}
-              currentPlayerKey={currentPlayerKey}
-              onSelectTrump={handleTrumpSelection}
-            />
           )}
+        </div>
 
-        {/* Card Exchange UI - Show during card exchange phase for special bids */}
-        {gamePhase === 'card-exchange' &&
-          biddingWinnerKey &&
-          isSpecialBid(winningBid) && (
-            <CardExchangeUI
-              biddingWinnerKey={biddingWinnerKey}
+        {/* Row 2: Left Player | Center | Right Player */}
+        <div className={styles.row2}>
+          {/* Left Player */}
+          <div className={styles.row2Left}>
+            {positionedPlayers.left && (
+              <>
+                <div className={styles.playerPositionLeft}>
+                  <Image
+                    src={getImageFromRole(positionedPlayers.left.role)}
+                    alt={positionedPlayers.left.nickname}
+                    width={80}
+                    height={80}
+                    className={styles.avatar}
+                  />
+                  <div className={styles.playerName}>
+                    {positionedPlayers.left.nickname}
+                  </div>
+                </div>
+                {/* Cards */}
+                {getHandForPositionLocal('left').length > 0 && (
+                  <div className={`${styles.cardHand} ${styles.cardHandLeft}`}>
+                    {getHandForPositionLocal('left').map((card, idx) => (
+                      <div
+                        key={card.id}
+                        className={`${styles.card} ${styles.cardLeft}`}
+                        style={{
+                          transform: `rotate(90deg)`,
+                          zIndex: idx,
+                        }}
+                      >
+                        <Image
+                          src='/Card Back.png'
+                          alt='Card back'
+                          fill
+                          className={styles.cardImage}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Center: Trick UI / Deck / Deal Button */}
+          <div className={styles.row2Center}>
+            {/* Trick UI - Show during trick playing phase */}
+            {gamePhase === 'trick-playing' && (
+              <TrickUI
+                currentTrick={currentTrick}
+                currentPlayerKey={currentPlayer}
+                currentPlayerHand={currentPlayerHand}
+                players={players}
+                trump={trump as Suit | null}
+                biddingWinnerKey={biddingWinnerKey || ''}
+                sittingOutPlayerKey={sittingOutPlayerKey}
+                onPlayCard={handleCardPlay}
+                positionedPlayers={positionedPlayers}
+                myPlayerKey={currentPlayerKey}
+              />
+            )}
+
+            {/* Center Deck - Only show during dealing phase */}
+            {gamePhase === 'dealing' && !isDealComplete && (
+              <div className={styles.deckContainer}>
+                <div className={styles.deck}>
+                  <Image
+                    src='/Card Back.png'
+                    alt='Card back'
+                    width={120}
+                    height={168}
+                    className={styles.cardBack}
+                    style={{ zIndex: 4 }}
+                  />
+                  <Image
+                    src='/Card Back.png'
+                    alt='Card back'
+                    width={120}
+                    height={168}
+                    className={styles.cardBack}
+                    style={{ zIndex: 3, transform: 'translate(3px, 3px)' }}
+                  />
+                  <Image
+                    src='/Card Back.png'
+                    alt='Card back'
+                    width={120}
+                    height={168}
+                    className={styles.cardBack}
+                    style={{ zIndex: 2, transform: 'translate(6px, 6px)' }}
+                  />
+                  <Image
+                    src='/Card Back.png'
+                    alt='Card back'
+                    width={120}
+                    height={168}
+                    className={styles.cardBack}
+                    style={{ zIndex: 1, transform: 'translate(9px, 9px)' }}
+                  />
+                </div>
+                {isCurrentPlayerDealerValue && !isDealComplete && (
+                  <button
+                    className={styles.dealButton}
+                    onClick={onDeal}
+                    disabled={isDealing}
+                  >
+                    {isDealing ? 'Dealing...' : 'Deal'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Right Player */}
+          <div className={styles.row2Right}>
+            {positionedPlayers.right && (
+              <>
+                {/* Cards */}
+                {getHandForPositionLocal('right').length > 0 && (
+                  <div className={`${styles.cardHand} ${styles.cardHandRight}`}>
+                    {getHandForPositionLocal('right').map((card, idx) => (
+                      <div
+                        key={card.id}
+                        className={`${styles.card} ${styles.cardRight}`}
+                        style={{
+                          transform: `rotate(-90deg)`,
+                          zIndex: idx,
+                        }}
+                      >
+                        <Image
+                          src='/Card Back.png'
+                          alt='Card back'
+                          fill
+                          className={styles.cardImage}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.playerPositionRight}>
+                  <Image
+                    src={getImageFromRole(positionedPlayers.right.role)}
+                    alt={positionedPlayers.right.nickname}
+                    width={80}
+                    height={80}
+                    className={styles.avatar}
+                  />
+                  <div className={styles.playerName}>
+                    {positionedPlayers.right.nickname}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Row 3: Waiting Box / UI Components */}
+        <div className={styles.row3}>
+          {/* Bidding UI - Show during bidding phase */}
+          {gamePhase === 'bidding' && currentBidderKey && (
+            <BiddingUI
+              currentBidderKey={currentBidderKey}
               currentPlayerKey={currentPlayerKey}
+              bids={bids}
               players={players}
-              hand={currentPlayerHand}
-              exchangeData={cardExchangeState || {}}
-              onSelectCards={handleCardExchange}
+              positionedPlayers={positionedPlayers}
+              dealerIndex={dealerIndex}
+              onBid={handleBid}
             />
           )}
 
-        {/* Center Deck - Only show if deal not complete */}
-        {!isDealComplete && (
-          <div className={styles.deckContainer}>
-            <div className={styles.deck}>
-              <Image
-                src='/Card Back.png'
-                alt='Card back'
-                width={120}
-                height={168}
-                className={styles.cardBack}
-                style={{ zIndex: 4 }}
+          {/* Trump Selection UI - Show during trump selection phase */}
+          {gamePhase === 'trump-selection' &&
+            biddingWinnerKey &&
+            winningBid !== 'ace-haus' && (
+              <TrumpSelectionUI
+                biddingWinnerKey={biddingWinnerKey}
+                currentPlayerKey={currentPlayerKey}
+                onSelectTrump={handleTrumpSelection}
               />
-              <Image
-                src='/Card Back.png'
-                alt='Card back'
-                width={120}
-                height={168}
-                className={styles.cardBack}
-                style={{ zIndex: 3, transform: 'translate(3px, 3px)' }}
-              />
-              <Image
-                src='/Card Back.png'
-                alt='Card back'
-                width={120}
-                height={168}
-                className={styles.cardBack}
-                style={{ zIndex: 2, transform: 'translate(6px, 6px)' }}
-              />
-              <Image
-                src='/Card Back.png'
-                alt='Card back'
-                width={120}
-                height={168}
-                className={styles.cardBack}
-                style={{ zIndex: 1, transform: 'translate(9px, 9px)' }}
-              />
-            </div>
-            {isCurrentPlayerDealerValue && !isDealComplete && (
-              <button
-                className={styles.dealButton}
-                onClick={onDeal}
-                disabled={isDealing}
-              >
-                {isDealing ? 'Dealing...' : 'Deal'}
-              </button>
             )}
-          </div>
-        )}
+
+          {/* Card Exchange UI - Show during card exchange phase for special bids */}
+          {gamePhase === 'card-exchange' &&
+            biddingWinnerKey &&
+            isSpecialBid(winningBid) && (
+              <CardExchangeUI
+                biddingWinnerKey={biddingWinnerKey}
+                currentPlayerKey={currentPlayerKey}
+                players={players}
+                hand={currentPlayerHand}
+                exchangeData={cardExchangeState || {}}
+                onSelectCards={handleCardExchange}
+              />
+            )}
+        </div>
+
+        {/* Row 4: Bottom Player (Current Player) */}
+        <div className={styles.row4}>
+          {positionedPlayers.bottom && (
+            <div className={styles.playerPosition}>
+              {/* Cards - Show face up for current player, make clickable during trick playing */}
+              {getHandForPositionLocal('bottom').length > 0 && (
+                <div className={`${styles.cardHand} ${styles.cardHandBottom}`}>
+                  {getHandForPositionLocal('bottom').map((card, idx) => {
+                    // During trick playing, check if card is playable
+                    const isTrickPlaying = gamePhase === 'trick-playing'
+                    const isMyTurn = currentPlayer === currentPlayerKey
+                    let isValid = false
+                    let isInvalid = false
+
+                    if (isTrickPlaying && isMyTurn) {
+                      // If currentTrick doesn't exist yet (first card of first trick), all cards are valid
+                      if (!currentTrick) {
+                        isValid = true
+                      } else {
+                        const validCards = getValidCardsForPlayer(
+                          getHandForPositionLocal('bottom'),
+                          currentTrick,
+                          trump as Suit | null
+                        )
+                        isValid = validCards.some((c) => c.id === card.id)
+                        isInvalid = !isValid
+                      }
+                    }
+
+                    return (
+                      <div
+                        key={card.id}
+                        className={`${styles.card} ${styles.cardBottom} ${
+                          isValid ? styles.playable : ''
+                        } ${isInvalid ? styles.unplayable : ''}`}
+                        style={{
+                          transform: `translateX(${(idx - 3.5) * 3.5}%)`,
+                          zIndex: idx,
+                          cursor:
+                            isTrickPlaying && isMyTurn
+                              ? isValid
+                                ? 'pointer'
+                                : 'not-allowed'
+                              : 'default',
+                        }}
+                        onClick={() => {
+                          if (isTrickPlaying && isMyTurn && isValid) {
+                            handleCardPlay(card)
+                          }
+                        }}
+                      >
+                        <Image
+                          src={getCardImagePath(card)}
+                          alt={`${card.rank} of ${card.suit}`}
+                          fill
+                          className={styles.cardImage}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <Image
+                src={getImageFromRole(positionedPlayers.bottom.role)}
+                alt={positionedPlayers.bottom.nickname}
+                width={80}
+                height={80}
+                className={styles.avatar}
+              />
+              <div className={styles.playerName}>
+                {positionedPlayers.bottom.nickname}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   )

@@ -63,7 +63,7 @@ export function useCurrentPlayerInfo(
 }
 
 /**
- * Subscribe to game state (dealer, hands, phase, bidding, trump, cardExchange)
+ * Subscribe to game state (dealer, hands, phase, bidding, trump, cardExchange, trick)
  */
 export function useGameState(
   gameCode: string | null,
@@ -73,7 +73,10 @@ export function useGameState(
   setBiddingState?: (state: any) => void,
   setBiddingWinner?: (key: string | null) => void,
   setTrump?: (trump: string | null) => void,
-  setCardExchange?: (state: any) => void
+  setCardExchange?: (state: any) => void,
+  setCurrentTrick?: (trick: any) => void,
+  setCurrentPlayer?: (key: string | null) => void,
+  setSittingOutPlayer?: (key: string | null) => void
 ) {
   useEffect(() => {
     if (!gameCode) return
@@ -105,6 +108,16 @@ export function useGameState(
       if (setCardExchange && gameData.cardExchange) {
         setCardExchange(gameData.cardExchange)
       }
+      if (setCurrentTrick) {
+        // Always set currentTrick, even if null (to clear it when phase changes)
+        setCurrentTrick(gameData.currentTrick || null)
+      }
+      if (setCurrentPlayer) {
+        setCurrentPlayer(gameData.currentPlayer || null)
+      }
+      if (setSittingOutPlayer) {
+        setSittingOutPlayer(gameData.sittingOutPlayer || null)
+      }
     })
     return () => unsub()
   }, [
@@ -116,6 +129,9 @@ export function useGameState(
     setBiddingWinner,
     setTrump,
     setCardExchange,
+    setCurrentTrick,
+    setCurrentPlayer,
+    setSittingOutPlayer,
   ])
 }
 

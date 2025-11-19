@@ -7,6 +7,7 @@ import {
   validateCardSelection,
 } from '../lib/specialBidLogic'
 import { getCardImagePath } from '../lib/dealLogic'
+import WaitingBox from './WaitingBox'
 import styles from './CardExchangeUI.module.scss'
 
 interface CardExchangeUIProps {
@@ -39,11 +40,7 @@ export default function CardExchangeUI({
 
   // Only show UI for bidding winner or partner
   if (!isBiddingWinner && !isPartner) {
-    return (
-      <div className={styles.waitingBox}>
-        <div className={styles.waitingText}>Waiting for card exchange...</div>
-      </div>
-    )
+    return <WaitingBox message='Waiting for card exchange...' />
   }
 
   // Check if partner has submitted their cards

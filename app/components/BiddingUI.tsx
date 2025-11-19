@@ -9,6 +9,7 @@ import {
   hasHausBeenBid,
   isBiddingComplete,
 } from '../lib/biddingLogic'
+import WaitingBox from './WaitingBox'
 import styles from './BiddingUI.module.scss'
 
 interface BiddingUIProps {
@@ -97,6 +98,11 @@ export default function BiddingUI({
     'double-haus',
   ]
 
+  // Get current bidder info
+  const currentBidder = currentBidderKey
+    ? players.find((p) => p.key === currentBidderKey)
+    : null
+
   return (
     <>
       {/* Bidding box for current bidder */}
@@ -121,6 +127,13 @@ export default function BiddingUI({
             })}
           </div>
         </div>
+      )}
+
+      {/* Waiting box when it's not current player's turn */}
+      {!isCurrentPlayerBidding && currentBidderKey && (
+        <WaitingBox
+          message={`${currentBidder?.nickname || 'Player'}'s turn`}
+        />
       )}
 
       {/* Message bubbles for other players' bids */}

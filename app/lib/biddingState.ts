@@ -49,7 +49,7 @@ export async function submitBid(
       const stuckBid = handleStuckDealer(updatedBids, dealerIndex, players)
       await push(bidsRef, stuckBid)
 
-      // Move to trump selection phase
+      // Move to trump selection phase (stuck dealer always goes to trump selection)
       const winner = getBiddingWinner([...updatedBids, stuckBid])
       await update(gameRef, {
         'bidding/currentBidderIndex': null,
@@ -57,13 +57,30 @@ export async function submitBid(
         biddingWinner: winner?.playerKey || null,
       })
     } else {
-      // Move to trump selection phase
+      // Get the winning bid
       const winner = getBiddingWinner(updatedBids)
-      await update(gameRef, {
+      const winningBid = winner?.bid
+
+      // Determine next phase based on bid type
+      let nextPhase = 'trump-selection'
+      if (winningBid === 'ace-haus') {
+        // Ace Haus skips trump selection and goes directly to card exchange
+        nextPhase = 'card-exchange'
+      }
+
+      const updates: any = {
         'bidding/currentBidderIndex': null,
-        phase: 'trump-selection',
+        phase: nextPhase,
         biddingWinner: winner?.playerKey || null,
-      })
+      }
+
+      // Initialize card exchange state if going to card exchange
+      if (nextPhase === 'card-exchange') {
+        updates.cardExchange = {}
+        updates.trump = null // Ace Haus has no trump
+      }
+
+      await update(gameRef, updates)
     }
   } else {
     // Move to next bidder

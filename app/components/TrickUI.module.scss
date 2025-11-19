@@ -1,0 +1,85 @@
+@import '../_variables.scss';
+
+.trickContainer {
+  padding: 2rem 3rem;
+  z-index: 800;
+  min-width: 300px;
+  max-width: 600px;
+  width: 100%;
+}
+
+.trickTitle {
+  font-size: $font-big-text;
+  color: white;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+}
+
+.trickCards {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.trickCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.trickCardImage {
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.trickCard.winner {
+  .trickCardImage {
+    box-shadow: 0 0 0 4px $secondary, 0 4px 16px rgba(0, 0, 0, 0.4);
+    transform: scale(1.1);
+  }
+}
+
+.trickCardPlayer {
+  font-size: $font-small;
+  color: white;
+  font-weight: 600;
+  text-align: center;
+}
+
+.trickWinner {
+  font-size: $font-text;
+  color: white;
+  text-align: center;
+  font-weight: 600;
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+}
+
+.invalidOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+}
+
+.invalidText {
+  color: white;
+  font-size: $font-small;
+  font-weight: 600;
+  text-align: center;
+}

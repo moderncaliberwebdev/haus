@@ -1,7 +1,8 @@
-import { ref, update } from 'firebase/database'
+import { ref, update, get } from 'firebase/database'
 import { db } from './firebase'
 import { type Suit } from './dealLogic'
 import { createTrumpSelection } from './trumpSelection'
+import { createTrick, startFirstTrick } from './trickState'
 
 /**
  * Submits trump selection for the bidding winner
@@ -9,7 +10,8 @@ import { createTrumpSelection } from './trumpSelection'
 export async function submitTrumpSelection(
   gameCode: string,
   trump: Suit,
-  bidType: string | null
+  bidType: string | null,
+  biddingWinnerKey: string
 ): Promise<void> {
   const gameRef = ref(db, `games/${gameCode}`)
   const trumpSelection = createTrumpSelection(trump)
@@ -42,5 +44,10 @@ export async function submitTrumpSelection(
     }
 
     await update(gameRef, updates)
+
+    // If going directly to trick-playing (regular bids), initialize the first trick
+    if (nextPhase === 'trick-playing') {
+      await startFirstTrick(gameCode, biddingWinnerKey)
+    }
   }
 }

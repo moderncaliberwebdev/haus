@@ -4,6 +4,7 @@ import { type Card } from './dealLogic'
 import { type Player } from './gameStart'
 import { exchangeCards, validateCardSelection } from './specialBidLogic'
 import { sortHand } from './dealLogic'
+import { startFirstTrick } from './trickState'
 
 /**
  * Submits cards for exchange from one player
@@ -124,11 +125,14 @@ export async function completeCardExchange(
     updatedHands[partnerHandIndex][idx] = card
   })
 
-  // Update Firebase with exchanged hands and move to next phase
+  // Update Firebase with exchanged hands
+  // Note: We'll start the first trick separately after this completes
   await update(gameRef, {
     hands: updatedHands,
-    phase: 'trick-playing',
     cardExchange: {}, // Clear exchange data
     sittingOutPlayer: partner.key, // Mark partner as sitting out
   })
+
+  // Start the first trick
+  await startFirstTrick(gameCode, biddingWinnerKey)
 }
