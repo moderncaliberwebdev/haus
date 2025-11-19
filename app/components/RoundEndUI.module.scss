@@ -1,0 +1,66 @@
+@import '../_variables.scss';
+
+.roundEndUI {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.content {
+  background: #000;
+  padding: 3rem;
+  border-radius: 1.5rem;
+  border: 3px solid $secondary;
+  text-align: center;
+  min-width: 400px;
+}
+
+.title {
+  font-size: $font-big-text;
+  color: $primary;
+  margin-bottom: 2rem;
+}
+
+.winner {
+  font-size: $font-text;
+  color: #000;
+  margin-bottom: 2rem;
+  font-weight: 600;
+}
+
+.scores {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.teamScore {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.teamName {
+  font-size: $font-text;
+  color: #000;
+  font-weight: 600;
+}
+
+.score {
+  font-size: 2rem;
+  font-weight: 700;
+  color: $primary;
+}
+
+.points {
+  font-size: $font-text;
+  color: $secondary;
+  font-weight: 600;
+}

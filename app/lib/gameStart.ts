@@ -76,7 +76,11 @@ export function useGameState(
   setCardExchange?: (state: any) => void,
   setCurrentTrick?: (trick: any) => void,
   setCurrentPlayer?: (key: string | null) => void,
-  setSittingOutPlayer?: (key: string | null) => void
+  setSittingOutPlayer?: (key: string | null) => void,
+  setTeam1Score?: (score: number) => void,
+  setTeam2Score?: (score: number) => void,
+  setRoundWinner?: (winner: 1 | 2 | null) => void,
+  setRoundPoints?: (points: number | null) => void
 ) {
   useEffect(() => {
     if (!gameCode) return
@@ -118,6 +122,18 @@ export function useGameState(
       if (setSittingOutPlayer) {
         setSittingOutPlayer(gameData.sittingOutPlayer || null)
       }
+      if (setTeam1Score) {
+        setTeam1Score(gameData.team1Score || 0)
+      }
+      if (setTeam2Score) {
+        setTeam2Score(gameData.team2Score || 0)
+      }
+      if (setRoundWinner) {
+        setRoundWinner(gameData.roundWinner || null)
+      }
+      if (setRoundPoints) {
+        setRoundPoints(gameData.roundPoints || null)
+      }
     })
     return () => unsub()
   }, [
@@ -132,6 +148,10 @@ export function useGameState(
     setCurrentTrick,
     setCurrentPlayer,
     setSittingOutPlayer,
+    setTeam1Score,
+    setTeam2Score,
+    setRoundWinner,
+    setRoundPoints,
   ])
 }
 

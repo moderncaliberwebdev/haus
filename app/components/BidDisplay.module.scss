@@ -1,0 +1,32 @@
+@import '../_variables.scss';
+
+.bidDisplay {
+  position: fixed;
+  top: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 2px solid $secondary;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  z-index: 1000;
+  font-size: $font-small;
+  color: #000;
+}
+
+.winner {
+  font-weight: 700;
+  color: $primary;
+}
+
+.bid {
+  color: #000;
+}
+
+.suit {
+  color: $secondary;
+  font-weight: 600;
+}

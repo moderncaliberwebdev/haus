@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Image from 'next/image'
-import { ref, get, update } from 'firebase/database'
+import { ref, get, update, onValue } from 'firebase/database'
 import { db } from '../../lib/firebase'
 import styles from './page.module.scss'
 import { getCardImagePath, type Card, handleDeal } from '../../lib/dealLogic'
@@ -23,6 +23,10 @@ import BiddingUI from '../../components/BiddingUI'
 import TrumpSelectionUI from '../../components/TrumpSelectionUI'
 import CardExchangeUI from '../../components/CardExchangeUI'
 import TrickUI from '../../components/TrickUI'
+import ScoreDisplay from '../../components/ScoreDisplay'
+import BidDisplay from '../../components/BidDisplay'
+import RoundEndUI from '../../components/RoundEndUI'
+import GameWinUI from '../../components/GameWinUI'
 import {
   type Bid,
   type BidType,
@@ -53,6 +57,13 @@ import {
 import { isSpecialBid } from '../../lib/specialBidLogic'
 import { type Suit } from '../../lib/dealLogic'
 import { type Trick } from '../../lib/trickLogic'
+import {
+  calculateRoundScores,
+  resetForNewRound,
+  getNextDealerIndex,
+  checkGameWin,
+} from '../../lib/roundManagement'
+import { getTeamForPlayer } from '../../lib/teamLogic'
 
 export default function GamePage() {
   const params = useParams()
@@ -78,6 +89,11 @@ export default function GamePage() {
   const [sittingOutPlayerKey, setSittingOutPlayerKey] = useState<string | null>(
     null
   )
+  const [team1Score, setTeam1Score] = useState<number>(0)
+  const [team2Score, setTeam2Score] = useState<number>(0)
+  const [roundWinner, setRoundWinner] = useState<1 | 2 | null>(null)
+  const [roundPoints, setRoundPoints] = useState<number | null>(null)
+  const [tricks, setTricks] = useState<Trick[]>([])
 
   // Use extracted hooks
   useGameExistenceCheck(gameCode)
@@ -93,7 +109,11 @@ export default function GamePage() {
     setCardExchangeState,
     setCurrentTrick,
     setCurrentPlayer,
-    setSittingOutPlayerKey
+    setSittingOutPlayerKey,
+    setTeam1Score,
+    setTeam2Score,
+    setRoundWinner,
+    setRoundPoints
   )
   usePlayersList(gameCode, setPlayers)
 
@@ -198,21 +218,24 @@ export default function GamePage() {
   }
 
   // Get winning bid type for trump selection logic
-  const winningBid = useMemo(() => {
+  const winningBid = useMemo((): BidType | null => {
     if (bids.length === 0) return null
     const winner = getBiddingWinner(bids)
-    const bid = winner?.bid || null
-    // Convert bid to string if it's a number
-    if (bid === null) return null
-    return typeof bid === 'number' ? String(bid) : bid
+    return (winner?.bid as BidType) || null
   }, [bids])
 
   // Handle trump selection
   const handleTrumpSelection = async (trumpSuit: Suit) => {
+    // Convert BidType to string for submitTrumpSelection
+    const bidTypeString = winningBid
+      ? typeof winningBid === 'number'
+        ? String(winningBid)
+        : winningBid
+      : null
     await submitTrumpSelection(
       gameCode,
       trumpSuit,
-      winningBid,
+      bidTypeString,
       biddingWinnerKey || ''
     )
   }
@@ -328,6 +351,104 @@ export default function GamePage() {
       return () => clearTimeout(timer)
     }
   }, [gamePhase, currentTrick, currentPlayer, gameCode])
+
+  // Fetch tricks from Firebase
+  useEffect(() => {
+    if (!gameCode || (gamePhase !== 'trick-playing' && gamePhase !== 'scoring'))
+      return
+    const tricksRef = ref(db, `games/${gameCode}/tricks`)
+    const unsub = onValue(tricksRef, (snap) => {
+      const tricksData = snap.val() || {}
+      const tricksArray: Trick[] = Object.values(tricksData) as Trick[]
+      setTricks(tricksArray)
+    })
+    return () => unsub()
+  }, [gameCode, gamePhase])
+
+  // Calculate scores when entering scoring phase
+  useEffect(() => {
+    if (
+      gamePhase === 'scoring' &&
+      biddingWinnerKey &&
+      winningBid &&
+      tricks.length === 8 &&
+      players.length === 4 &&
+      !roundWinner
+    ) {
+      calculateRoundScores(
+        gameCode,
+        winningBid,
+        biddingWinnerKey,
+        tricks,
+        players,
+        [team1Score, team2Score]
+      ).catch((err: any) => {
+        console.error('Error calculating round scores:', err)
+      })
+    }
+  }, [
+    gamePhase,
+    biddingWinnerKey,
+    winningBid,
+    tricks,
+    players,
+    team1Score,
+    team2Score,
+    roundWinner,
+    gameCode,
+  ])
+
+  // Show round end UI and reset after 3 seconds
+  useEffect(() => {
+    if (gamePhase === 'scoring' && roundWinner && roundPoints !== null) {
+      const timer = setTimeout(async () => {
+        // Check for game win
+        const gameWinner = checkGameWin(team1Score, team2Score)
+
+        if (gameWinner) {
+          // Game is won - will be handled by GameWinUI
+          return
+        }
+
+        // Reset for new round
+        const nextDealerIndex = getNextDealerIndex(dealerIndex)
+        await resetForNewRound(gameCode, nextDealerIndex)
+      }, 3000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [
+    gamePhase,
+    roundWinner,
+    roundPoints,
+    team1Score,
+    team2Score,
+    dealerIndex,
+    gameCode,
+  ])
+
+  // Get bidding team
+  const biddingTeam = useMemo(() => {
+    if (!biddingWinnerKey || players.length === 0) return null
+    return getTeamForPlayer(players, biddingWinnerKey)
+  }, [biddingWinnerKey, players])
+
+  // Get bidding winner name
+  const biddingWinnerName = useMemo(() => {
+    if (!biddingWinnerKey || players.length === 0) return null
+    return players.find((p) => p.key === biddingWinnerKey)?.nickname || null
+  }, [biddingWinnerKey, players])
+
+  // Check for game win
+  const gameWinner = useMemo(() => {
+    return checkGameWin(team1Score, team2Score)
+  }, [team1Score, team2Score])
+
+  // Handle play again
+  const handlePlayAgain = async () => {
+    const nextDealerIndex = getNextDealerIndex(dealerIndex)
+    await resetForNewRound(gameCode, nextDealerIndex)
+  }
 
   // If no players, redirect back
   if (players.length === 0) {
@@ -565,7 +686,10 @@ export default function GamePage() {
           {/* Card Exchange UI - Show during card exchange phase for special bids */}
           {gamePhase === 'card-exchange' &&
             biddingWinnerKey &&
-            isSpecialBid(winningBid) && (
+            winningBid &&
+            isSpecialBid(
+              typeof winningBid === 'number' ? String(winningBid) : winningBid
+            ) && (
               <CardExchangeUI
                 biddingWinnerKey={biddingWinnerKey}
                 currentPlayerKey={currentPlayerKey}
@@ -653,6 +777,49 @@ export default function GamePage() {
           )}
         </div>
       </div>
+
+      {/* Score Display - Always visible in bottom right */}
+      {gamePhase !== 'dealing' && (
+        <ScoreDisplay
+          players={players}
+          team1Score={team1Score}
+          team2Score={team2Score}
+          currentTricks={tricks}
+          biddingTeam={biddingTeam}
+        />
+      )}
+
+      {/* Bid Display - Always visible at top during trick playing */}
+      {gamePhase === 'trick-playing' && (
+        <BidDisplay
+          biddingWinnerName={biddingWinnerName}
+          winningBid={winningBid}
+          trump={trump as Suit | null}
+        />
+      )}
+
+      {/* Round End UI - Show after scoring */}
+      {gamePhase === 'scoring' && roundWinner && roundPoints !== null && (
+        <RoundEndUI
+          roundWinner={roundWinner}
+          team1Score={team1Score}
+          team2Score={team2Score}
+          roundPoints={roundPoints}
+          players={players}
+        />
+      )}
+
+      {/* Game Win UI - Show when a team reaches 64 points */}
+      {gameWinner && (
+        <GameWinUI
+          winningTeam={gameWinner}
+          team1Score={team1Score}
+          team2Score={team2Score}
+          players={players}
+          gameCode={gameCode}
+          onPlayAgain={handlePlayAgain}
+        />
+      )}
     </main>
   )
 }

@@ -1,0 +1,101 @@
+@import '../_variables.scss';
+
+.gameWinUI {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.content {
+  background: #000;
+  padding: 4rem;
+  border-radius: 1.5rem;
+  border: 3px solid $secondary;
+  text-align: center;
+  min-width: 500px;
+}
+
+.title {
+  font-size: 3rem;
+  color: $primary;
+  margin-bottom: 2rem;
+  font-weight: 700;
+}
+
+.winner {
+  font-size: $font-big-text;
+  color: $secondary;
+  margin-bottom: 3rem;
+  font-weight: 600;
+}
+
+.finalScores {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.teamScore {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.teamName {
+  font-size: $font-text;
+  color: #000;
+  font-weight: 600;
+}
+
+.score {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: $primary;
+}
+
+.actions {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+}
+
+.playAgainButton,
+.leaveButton {
+  padding: 1rem 2rem;
+  font-size: $font-text;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.playAgainButton {
+  background: $secondary;
+  color: #000;
+
+  &:hover {
+    background: lighten($secondary, 10%);
+    transform: scale(1.05);
+  }
+}
+
+.leaveButton {
+  background: transparent;
+  color: #000;
+  border: 2px solid #000;
+
+  &:hover {
+    background: #000;
+    color: #000;
+    transform: scale(1.05);
+  }
+}
