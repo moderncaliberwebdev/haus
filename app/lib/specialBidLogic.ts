@@ -10,8 +10,12 @@ export type SpecialBidType = 'haus' | 'double-haus' | 'ace-haus'
 /**
  * Checks if a bid type requires special handling (card exchange)
  */
-export function isSpecialBid(bidType: string | null): bidType is SpecialBidType {
-  return bidType === 'haus' || bidType === 'double-haus' || bidType === 'ace-haus'
+export function isSpecialBid(
+  bidType: string | null
+): bidType is SpecialBidType {
+  return (
+    bidType === 'haus' || bidType === 'double-haus' || bidType === 'ace-haus'
+  )
 }
 
 /**
@@ -23,7 +27,7 @@ export function getBiddingWinnerPartner(
 ): Player | null {
   const biddingWinner = players.find((p) => p.key === biddingWinnerKey)
   if (!biddingWinner) return null
-  
+
   const winnerIndex = players.findIndex((p) => p.key === biddingWinnerKey)
   return getPartner(players, winnerIndex)
 }
@@ -38,7 +42,7 @@ export function needsToExchangeCards(
   playerKey: string
 ): boolean {
   const partner = getBiddingWinnerPartner(players, biddingWinnerKey)
-  return playerKey === biddingWinnerKey || (partner?.key === playerKey)
+  return playerKey === biddingWinnerKey || partner?.key === playerKey
 }
 
 /**
@@ -68,7 +72,7 @@ export function addCardsToHand(hand: Card[], cardsToAdd: Card[]): Card[] {
 
 /**
  * Exchanges cards between two players
- * 
+ *
  * @param player1Hand Player 1's hand
  * @param player1Cards Cards player 1 is sending
  * @param player2Hand Player 2's hand
@@ -81,14 +85,36 @@ export function exchangeCards(
   player2Hand: Card[],
   player2Cards: Card[]
 ): { player1NewHand: Card[]; player2NewHand: Card[] } {
+  // Create deep copies of cards being sent to avoid reference issues
+  const player1CardsToSend = player1Cards.map((c) => ({ ...c }))
+  const player2CardsToSend = player2Cards.map((c) => ({ ...c }))
+
   // Remove cards being sent from each hand
-  const player1AfterRemove = removeCardsFromHand(player1Hand, player1Cards)
-  const player2AfterRemove = removeCardsFromHand(player2Hand, player2Cards)
-  
+  const player1AfterRemove = removeCardsFromHand(
+    player1Hand,
+    player1CardsToSend
+  )
+  const player2AfterRemove = removeCardsFromHand(
+    player2Hand,
+    player2CardsToSend
+  )
+
+  // Ensure received cards are not already in the hand (defensive check)
+  const player1HandIds = new Set(player1AfterRemove.map((c) => c.id))
+  const player2HandIds = new Set(player2AfterRemove.map((c) => c.id))
+
+  // Filter out any cards that are already in the receiving hand
+  const player2CardsToAdd = player2CardsToSend.filter(
+    (c) => !player1HandIds.has(c.id)
+  )
+  const player1CardsToAdd = player1CardsToSend.filter(
+    (c) => !player2HandIds.has(c.id)
+  )
+
   // Add received cards to each hand
-  const player1NewHand = addCardsToHand(player1AfterRemove, player2Cards)
-  const player2NewHand = addCardsToHand(player2AfterRemove, player1Cards)
-  
+  const player1NewHand = addCardsToHand(player1AfterRemove, player2CardsToAdd)
+  const player2NewHand = addCardsToHand(player2AfterRemove, player1CardsToAdd)
+
   return { player1NewHand, player2NewHand }
 }
 
@@ -112,6 +138,6 @@ export function getActivePlayers(
 ): Player[] {
   const sittingOutPlayer = getSittingOutPlayer(players, biddingWinnerKey)
   if (!sittingOutPlayer) return players
-  
+
   return players.filter((p) => p.key !== sittingOutPlayer.key)
 }

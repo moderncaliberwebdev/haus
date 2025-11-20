@@ -32,7 +32,8 @@ export async function calculateRoundScores(
   team1Score: number
   team2Score: number
   roundWinner: 1 | 2
-  points: number
+  team1Points: number
+  team2Points: number
 }> {
   // Determine which team made the bid
   const biddingTeam = getTeamForPlayer(players, biddingWinnerKey)
@@ -43,45 +44,70 @@ export async function calculateRoundScores(
   // Count tricks won by each team
   const { team1, team2 } = getTricksWonByTeam(tricks, players)
 
-  // Determine which team won the round
-  const tricksWonByBiddingTeam =
-    biddingTeam === 1 ? team1 : team2
-  const roundWinner = getRoundWinner(
-    winningBid,
-    tricksWonByBiddingTeam,
-    biddingTeam
-  )!
+  // Calculate points for both teams
+  const biddingTeamTricks = biddingTeam === 1 ? team1 : team2
+  const otherTeamTricks = biddingTeam === 1 ? team2 : team1
 
-  // Calculate points for this round
-  const points = calculateRoundPoints(
+  const { biddingTeamPoints, otherTeamPoints } = calculateRoundPoints(
     winningBid,
-    tricksWonByBiddingTeam
+    biddingTeamTricks,
+    otherTeamTricks
   )
+
+  // Determine which team won the round (team with more points this round)
+  const roundWinner =
+    biddingTeamPoints > otherTeamPoints
+      ? biddingTeam
+      : biddingTeam === 1
+      ? 2
+      : 1
 
   // Update scores
   let team1Score = currentScores[0]
   let team2Score = currentScores[1]
 
-  if (roundWinner === 1) {
-    team1Score += Math.abs(points)
+  if (biddingTeam === 1) {
+    team1Score += biddingTeamPoints
+    team2Score += otherTeamPoints
   } else {
-    team2Score += Math.abs(points)
+    team1Score += otherTeamPoints
+    team2Score += biddingTeamPoints
   }
 
-  // Update scores in Firebase
+  // Get sitting out player and clear their hand
   const gameRef = ref(db, `games/${gameCode}`)
-  await update(gameRef, {
+  const gameSnap = await get(gameRef)
+  const gameData = gameSnap.val() || {}
+  const sittingOutPlayerKey = gameData.sittingOutPlayer || null
+
+  // Prepare updates object
+  const updates: Record<string, any> = {
     team1Score,
     team2Score,
     roundWinner,
-    roundPoints: points,
-  })
+    team1Points: biddingTeam === 1 ? biddingTeamPoints : otherTeamPoints,
+    team2Points: biddingTeam === 1 ? otherTeamPoints : biddingTeamPoints,
+  }
+
+  // Clear sitting out player's hand if there is one
+  if (sittingOutPlayerKey) {
+    const sittingOutPlayerIndex = players.findIndex(
+      (p) => p.key === sittingOutPlayerKey
+    )
+    if (sittingOutPlayerIndex !== -1) {
+      updates[`hands/${sittingOutPlayerIndex}`] = {}
+    }
+  }
+
+  // Update scores and clear sitting out player's hand in Firebase
+  await update(gameRef, updates)
 
   return {
     team1Score,
     team2Score,
     roundWinner,
-    points,
+    team1Points: biddingTeam === 1 ? biddingTeamPoints : otherTeamPoints,
+    team2Points: biddingTeam === 1 ? otherTeamPoints : biddingTeamPoints,
   }
 }
 
@@ -90,13 +116,19 @@ export async function calculateRoundScores(
  */
 export async function resetForNewRound(
   gameCode: string,
-  newDealerIndex: number
+  newDealerIndex: number,
+  players: Player[]
 ): Promise<void> {
   const gameRef = ref(db, `games/${gameCode}`)
+
+  // Get the dealer's player key from the index
+  const newDealer = players[newDealerIndex]
+  const newDealerKey = newDealer?.key || ''
 
   await update(gameRef, {
     phase: 'dealing',
     dealerIndex: newDealerIndex,
+    dealerKey: newDealerKey, // Update dealerKey as well
     // Clear hands
     hands: {},
     // Clear bidding state
@@ -115,7 +147,8 @@ export async function resetForNewRound(
     currentPlayer: null,
     // Clear round-specific data
     roundWinner: null,
-    roundPoints: null,
+    team1Points: null,
+    team2Points: null,
   })
 }
 
@@ -130,4 +163,3 @@ export function checkGameWin(
   if (hasTeamWonGame(team2Score)) return 2
   return null
 }
-

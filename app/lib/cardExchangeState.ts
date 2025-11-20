@@ -83,12 +83,25 @@ export async function completeCardExchange(
   const gameData = gameSnap.val() || {}
   const hands = gameData.hands || {}
 
-  // Convert Firebase hands to arrays
-  const winnerHand: Card[] = Object.values(
-    hands[players.findIndex((p) => p.key === biddingWinnerKey)] || {}
-  )
-  const partnerHand: Card[] = Object.values(
-    hands[players.findIndex((p) => p.key === partner.key)] || {}
+  // Get player indices (convert to string for Firebase access)
+  const winnerHandIndex = players.findIndex((p) => p.key === biddingWinnerKey)
+  const partnerHandIndex = players.findIndex((p) => p.key === partner.key)
+
+  // Convert Firebase hands to arrays (Firebase stores indices as strings)
+  const winnerHandObj =
+    hands[winnerHandIndex] || hands[String(winnerHandIndex)] || {}
+  const partnerHandObj =
+    hands[partnerHandIndex] || hands[String(partnerHandIndex)] || {}
+
+  const winnerHand: Card[] = Object.values(winnerHandObj) as Card[]
+  const partnerHand: Card[] = Object.values(partnerHandObj) as Card[]
+
+  console.log(
+    'data before exchange',
+    winnerHand,
+    winnerCards,
+    partnerHand,
+    partnerCards
   )
 
   // Exchange cards
@@ -98,14 +111,13 @@ export async function completeCardExchange(
     partnerHand,
     partnerCards
   )
+  console.log('data after exchange', player1NewHand, player2NewHand)
 
   // Sort hands
   const sortedWinnerHand = sortHand(player1NewHand)
   const sortedPartnerHand = sortHand(player2NewHand)
 
-  // Convert back to Firebase format
-  const winnerHandIndex = players.findIndex((p) => p.key === biddingWinnerKey)
-  const partnerHandIndex = players.findIndex((p) => p.key === partner.key)
+  console.log('sorted hands', sortedWinnerHand, sortedPartnerHand)
 
   // Get existing hands structure
   const existingHands = gameData.hands || {}
@@ -118,12 +130,13 @@ export async function completeCardExchange(
   sortedWinnerHand.forEach((card, idx) => {
     updatedHands[winnerHandIndex][idx] = card
   })
-
+  console.log('updated hands', updatedHands)
   // Update partner's hand
   updatedHands[partnerHandIndex] = {}
   sortedPartnerHand.forEach((card, idx) => {
     updatedHands[partnerHandIndex][idx] = card
   })
+  console.log('updated hands', updatedHands)
 
   // Update Firebase with exchanged hands
   // Note: We'll start the first trick separately after this completes

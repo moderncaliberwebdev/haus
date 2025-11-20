@@ -6,7 +6,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.95);
+  background: rgba(255, 255, 255, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,7 +14,7 @@
 }
 
 .content {
-  background: #000;
+  background: #fff;
   padding: 4rem;
   border-radius: 1.5rem;
   border: 3px solid $secondary;

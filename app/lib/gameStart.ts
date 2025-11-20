@@ -80,7 +80,8 @@ export function useGameState(
   setTeam1Score?: (score: number) => void,
   setTeam2Score?: (score: number) => void,
   setRoundWinner?: (winner: 1 | 2 | null) => void,
-  setRoundPoints?: (points: number | null) => void
+  setTeam1Points?: (points: number | null) => void,
+  setTeam2Points?: (points: number | null) => void
 ) {
   useEffect(() => {
     if (!gameCode) return
@@ -88,14 +89,24 @@ export function useGameState(
     const unsub = onValue(gameRef, (snap) => {
       const gameData = snap.val() || {}
       setDealerKey(gameData.dealerKey || '')
-      if (gameData.hands) {
+      // Always update hands, even if empty or partially cleared
+      if (gameData.hands !== undefined) {
         // Convert Firebase object format back to array format
         const handsArray: Card[][] = []
         for (let i = 0; i < 4; i++) {
-          const playerHand = gameData.hands[i] || {}
-          handsArray[i] = Object.values(playerHand) as Card[]
+          const playerHand =
+            gameData.hands[i] || gameData.hands[String(i)] || {}
+          // If playerHand is an empty object, set to empty array
+          const handCards =
+            Object.keys(playerHand).length === 0
+              ? []
+              : (Object.values(playerHand) as Card[])
+          handsArray[i] = handCards
         }
         setHands(handsArray)
+      } else {
+        // If hands is undefined, clear all hands
+        setHands([[], [], [], []])
       }
       if (setPhase && gameData.phase) {
         setPhase(gameData.phase)
@@ -131,8 +142,11 @@ export function useGameState(
       if (setRoundWinner) {
         setRoundWinner(gameData.roundWinner || null)
       }
-      if (setRoundPoints) {
-        setRoundPoints(gameData.roundPoints || null)
+      if (setTeam1Points) {
+        setTeam1Points(gameData.team1Points || null)
+      }
+      if (setTeam2Points) {
+        setTeam2Points(gameData.team2Points || null)
       }
     })
     return () => unsub()
@@ -151,7 +165,6 @@ export function useGameState(
     setTeam1Score,
     setTeam2Score,
     setRoundWinner,
-    setRoundPoints,
   ])
 }
 

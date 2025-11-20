@@ -42,6 +42,7 @@ export default function ScoreDisplay({
           ))}
         </div>
         <div className={styles.score}>{team1Score}</div>
+        <div className={styles.trickCount}>Tricks: {team1Tricks}</div>
       </div>
 
       {/* Team 2 */}
@@ -55,6 +56,7 @@ export default function ScoreDisplay({
           ))}
         </div>
         <div className={styles.score}>{team2Score}</div>
+        <div className={styles.trickCount}>Tricks: {team2Tricks}</div>
       </div>
     </div>
   )

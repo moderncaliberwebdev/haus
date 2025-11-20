@@ -4,39 +4,56 @@ import { type Player } from './gameStart'
 import { getTrickWinningTeam } from './teamLogic'
 
 /**
- * Calculates points for a round based on the bid and tricks won
+ * Calculates points for both teams in a round
  * @param bidType The type of bid (4, 5, 6, 7, haus, ace-haus, double-haus)
- * @param tricksWon Number of tricks won by the bidding team
+ * @param biddingTeamTricks Number of tricks won by the bidding team
+ * @param otherTeamTricks Number of tricks won by the other team
  * @param tricksTotal Total number of tricks in the round (usually 8)
- * @returns Points for the bidding team (positive if they made it, negative if they didn't)
+ * @returns Object with points for bidding team and other team
  */
 export function calculateRoundPoints(
   bidType: BidType,
-  tricksWon: number,
+  biddingTeamTricks: number,
+  otherTeamTricks: number,
   tricksTotal: number = 8
-): number {
-  // For special bids, points are fixed
+): { biddingTeamPoints: number; otherTeamPoints: number } {
+  // Get bid number
+  let bidNumber: number
+  if (bidType === 'haus') {
+    bidNumber = 8
+  } else if (bidType === 'ace-haus') {
+    bidNumber = 8
+  } else if (bidType === 'double-haus') {
+    bidNumber = 8
+  } else {
+    bidNumber = parseInt(bidType as string)
+    if (isNaN(bidNumber)) bidNumber = 0
+  }
+
+  const madeBid = biddingTeamTricks >= bidNumber
+
+  let biddingTeamPoints: number
   if (bidType === 'haus') {
     // Haus: 16 points if made, -16 if not
-    return tricksWon >= 8 ? 16 : -16
-  }
-
-  if (bidType === 'ace-haus') {
+    biddingTeamPoints = madeBid ? 16 : -16
+  } else if (bidType === 'ace-haus') {
     // Ace Haus: 12 points if made, -12 if not
-    return tricksWon >= 8 ? 12 : -12
-  }
-
-  if (bidType === 'double-haus') {
+    biddingTeamPoints = madeBid ? 12 : -12
+  } else if (bidType === 'double-haus') {
     // Double Haus: 32 points if made, -32 if not
-    return tricksWon >= 8 ? 32 : -32
+    biddingTeamPoints = madeBid ? 32 : -32
+  } else {
+    // Regular bids: if made, get points equal to tricks won; if not, negative bid number
+    biddingTeamPoints = madeBid ? biddingTeamTricks : -bidNumber
   }
 
-  // For regular bids (4, 5, 6, 7), points equal the bid number
-  // If they made it, they get positive points; if not, negative
-  const bidNumber = parseInt(bidType as string)
-  if (isNaN(bidNumber)) return 0
+  // Other team always gets points equal to tricks they won
+  const otherTeamPoints = otherTeamTricks
 
-  return tricksWon >= bidNumber ? bidNumber : -bidNumber
+  return {
+    biddingTeamPoints,
+    otherTeamPoints,
+  }
 }
 
 /**
@@ -90,7 +107,11 @@ export function getRoundWinner(
  * Gets the bid number from a bid type
  */
 function getBidNumber(bidType: BidType): number {
-  if (bidType === 'haus' || bidType === 'ace-haus' || bidType === 'double-haus') {
+  if (
+    bidType === 'haus' ||
+    bidType === 'ace-haus' ||
+    bidType === 'double-haus'
+  ) {
     return 8 // Special bids require all 8 tricks
   }
   const num = parseInt(bidType as string)
@@ -103,4 +124,3 @@ function getBidNumber(bidType: BidType): number {
 export function hasTeamWonGame(teamScore: number): boolean {
   return teamScore >= 64
 }
-

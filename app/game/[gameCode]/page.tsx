@@ -92,7 +92,8 @@ export default function GamePage() {
   const [team1Score, setTeam1Score] = useState<number>(0)
   const [team2Score, setTeam2Score] = useState<number>(0)
   const [roundWinner, setRoundWinner] = useState<1 | 2 | null>(null)
-  const [roundPoints, setRoundPoints] = useState<number | null>(null)
+  const [team1Points, setTeam1Points] = useState<number | null>(null)
+  const [team2Points, setTeam2Points] = useState<number | null>(null)
   const [tricks, setTricks] = useState<Trick[]>([])
 
   // Use extracted hooks
@@ -113,7 +114,8 @@ export default function GamePage() {
     setTeam1Score,
     setTeam2Score,
     setRoundWinner,
-    setRoundPoints
+    setTeam1Points,
+    setTeam2Points
   )
   usePlayersList(gameCode, setPlayers)
 
@@ -382,9 +384,24 @@ export default function GamePage() {
         tricks,
         players,
         [team1Score, team2Score]
-      ).catch((err: any) => {
-        console.error('Error calculating round scores:', err)
-      })
+      )
+        .then(() => {
+          // After scores are calculated, clear sitting out player's hand from local state
+          // This ensures the UI updates immediately even if Firebase listener hasn't fired
+          if (sittingOutPlayerKey) {
+            const sittingOutPlayerIndex = players.findIndex(
+              (p) => p.key === sittingOutPlayerKey
+            )
+            if (sittingOutPlayerIndex !== -1 && hands[sittingOutPlayerIndex]) {
+              const updatedHands = [...hands]
+              updatedHands[sittingOutPlayerIndex] = []
+              setHands(updatedHands)
+            }
+          }
+        })
+        .catch((err: any) => {
+          console.error('Error calculating round scores:', err)
+        })
     }
   }, [
     gamePhase,
@@ -396,11 +413,26 @@ export default function GamePage() {
     team2Score,
     roundWinner,
     gameCode,
+    sittingOutPlayerKey,
+    hands,
   ])
+
+  // Clear all hands when phase changes to dealing (new round starting)
+  useEffect(() => {
+    if (gamePhase === 'dealing') {
+      // Clear all hands from local state when a new round starts
+      setHands([[], [], [], []])
+    }
+  }, [gamePhase])
 
   // Show round end UI and reset after 3 seconds
   useEffect(() => {
-    if (gamePhase === 'scoring' && roundWinner && roundPoints !== null) {
+    if (
+      gamePhase === 'scoring' &&
+      roundWinner &&
+      team1Points !== null &&
+      team2Points !== null
+    ) {
       const timer = setTimeout(async () => {
         // Check for game win
         const gameWinner = checkGameWin(team1Score, team2Score)
@@ -412,7 +444,8 @@ export default function GamePage() {
 
         // Reset for new round
         const nextDealerIndex = getNextDealerIndex(dealerIndex)
-        await resetForNewRound(gameCode, nextDealerIndex)
+        await resetForNewRound(gameCode, nextDealerIndex, players)
+        // Hands will be cleared by the phase change effect above
       }, 3000)
 
       return () => clearTimeout(timer)
@@ -420,7 +453,8 @@ export default function GamePage() {
   }, [
     gamePhase,
     roundWinner,
-    roundPoints,
+    team1Points,
+    team2Points,
     team1Score,
     team2Score,
     dealerIndex,
@@ -447,7 +481,7 @@ export default function GamePage() {
   // Handle play again
   const handlePlayAgain = async () => {
     const nextDealerIndex = getNextDealerIndex(dealerIndex)
-    await resetForNewRound(gameCode, nextDealerIndex)
+    await resetForNewRound(gameCode, nextDealerIndex, players)
   }
 
   // If no players, redirect back
@@ -779,15 +813,14 @@ export default function GamePage() {
       </div>
 
       {/* Score Display - Always visible in bottom right */}
-      {gamePhase !== 'dealing' && (
-        <ScoreDisplay
-          players={players}
-          team1Score={team1Score}
-          team2Score={team2Score}
-          currentTricks={tricks}
-          biddingTeam={biddingTeam}
-        />
-      )}
+
+      <ScoreDisplay
+        players={players}
+        team1Score={team1Score}
+        team2Score={team2Score}
+        currentTricks={tricks}
+        biddingTeam={biddingTeam}
+      />
 
       {/* Bid Display - Always visible at top during trick playing */}
       {gamePhase === 'trick-playing' && (
@@ -799,15 +832,19 @@ export default function GamePage() {
       )}
 
       {/* Round End UI - Show after scoring */}
-      {gamePhase === 'scoring' && roundWinner && roundPoints !== null && (
-        <RoundEndUI
-          roundWinner={roundWinner}
-          team1Score={team1Score}
-          team2Score={team2Score}
-          roundPoints={roundPoints}
-          players={players}
-        />
-      )}
+      {gamePhase === 'scoring' &&
+        roundWinner &&
+        team1Points !== null &&
+        team2Points !== null && (
+          <RoundEndUI
+            roundWinner={roundWinner}
+            team1Score={team1Score}
+            team2Score={team2Score}
+            team1Points={team1Points}
+            team2Points={team2Points}
+            players={players}
+          />
+        )}
 
       {/* Game Win UI - Show when a team reaches 64 points */}
       {gameWinner && (

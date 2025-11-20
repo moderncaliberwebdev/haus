@@ -5,6 +5,9 @@ import {
   determineTrickWinner,
   canPlayCard,
   getValidCards,
+  isLeftBar,
+  isRightBar,
+  isTrumpCard,
 } from './cardRanking'
 import { getTrickWinningTeam } from './teamLogic'
 
@@ -31,10 +34,23 @@ export interface Trick {
 
 /**
  * Gets the led suit from a trick (suit of first card)
+ * If the first card is Left Bar or Right Bar, returns trump suit
  */
-export function getLedSuit(trick: Trick): Suit | null {
+export function getLedSuit(trick: Trick, trump: Suit | null): Suit | null {
   if (trick.cards.length === 0) return null
-  return trick.cards[0].card.suit
+  const firstCard = trick.cards[0].card
+
+  // If we have a stored ledSuit, use it (it should already be correct)
+  if (trick.ledSuit) {
+    return trick.ledSuit
+  }
+
+  // Fallback: determine led suit from first card
+  if (trump && (isLeftBar(firstCard, trump) || isRightBar(firstCard, trump))) {
+    return trump
+  }
+
+  return firstCard.suit
 }
 
 /**
@@ -54,14 +70,20 @@ export function playCard(
   trick: Trick,
   card: Card,
   playerKey: string,
-  playerIndex: number
+  playerIndex: number,
+  trump: Suit | null
 ): Trick {
   const newTrick = { ...trick }
   const playOrder = newTrick.cards.length
 
   // If this is the first card, set the led suit
   if (playOrder === 0) {
-    newTrick.ledSuit = card.suit
+    // If the card is Left Bar or Right Bar, the led suit is trump
+    if (trump && (isLeftBar(card, trump) || isRightBar(card, trump))) {
+      newTrick.ledSuit = trump
+    } else {
+      newTrick.ledSuit = card.suit
+    }
   }
 
   // Add the card to the trick
@@ -155,7 +177,7 @@ export function getValidCardsForPlayer(
   trick: Trick,
   trump: Suit | null
 ): Card[] {
-  const ledSuit = getLedSuit(trick)
+  const ledSuit = getLedSuit(trick, trump)
   return getValidCards(hand, ledSuit, trump)
 }
 
@@ -168,7 +190,7 @@ export function canPlayerPlayCard(
   trick: Trick,
   trump: Suit | null
 ): boolean {
-  const ledSuit = getLedSuit(trick)
+  const ledSuit = getLedSuit(trick, trump)
   return canPlayCard(card, hand, ledSuit, trump)
 }
 

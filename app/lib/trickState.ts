@@ -34,7 +34,7 @@ export async function submitCardPlay(
   const trickToUse = currentTrick || createTrick()
 
   // Play the card
-  const updatedTrick = playCard(trickToUse, card, playerKey, playerIndex)
+  const updatedTrick = playCard(trickToUse, card, playerKey, playerIndex, trump)
 
   // Remove card from player's hand
   const handsRef = ref(db, `games/${gameCode}/hands`)

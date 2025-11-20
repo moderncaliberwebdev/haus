@@ -240,7 +240,8 @@ export function canPlayCard(
       return c.suit === trump || isLeftBar(c, trump)
     }
     // Led suit is not trump, must follow exact suit
-    return c.suit === ledSuit
+    // Left Bar is trump, not the led suit, so exclude it
+    return c.suit === ledSuit && !isLeftBar(c, trump)
   })
 
   // If player has cards that can follow, must play one
@@ -250,7 +251,8 @@ export function canPlayCard(
       return card.suit === trump || isLeftBar(card, trump)
     }
     // Led suit is not trump, must follow exact suit
-    return card.suit === ledSuit
+    // Left Bar is trump, not the led suit, so it's not valid
+    return card.suit === ledSuit && !isLeftBar(card, trump)
   }
 
   // Player doesn't have led suit, can play anything (including trump)
@@ -293,7 +295,8 @@ export function getValidCards(
       return c.suit === trump || isLeftBar(c, trump)
     }
     // Led suit is not trump, must follow exact suit
-    return c.suit === ledSuit
+    // Left Bar is trump, not the led suit, so exclude it
+    return c.suit === ledSuit && !isLeftBar(c, trump)
   })
 
   if (hasLedSuit) {
@@ -303,7 +306,8 @@ export function getValidCards(
       return hand.filter((c) => c.suit === trump || isLeftBar(c, trump))
     }
     // Led suit is not trump, must follow exact suit
-    return hand.filter((c) => c.suit === ledSuit)
+    // Left Bar is trump, not the led suit, so exclude it
+    return hand.filter((c) => c.suit === ledSuit && !isLeftBar(c, trump))
   }
 
   // Player doesn't have led suit, can play anything

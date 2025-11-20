@@ -7,7 +7,8 @@ interface RoundEndUIProps {
   roundWinner: 1 | 2
   team1Score: number
   team2Score: number
-  roundPoints: number
+  team1Points: number
+  team2Points: number
   players: Player[]
 }
 
@@ -15,12 +16,12 @@ export default function RoundEndUI({
   roundWinner,
   team1Score,
   team2Score,
-  roundPoints,
+  team1Points,
+  team2Points,
   players,
 }: RoundEndUIProps) {
   const { team1, team2 } = createTeams(players, [team1Score, team2Score])
   const winningTeam = roundWinner === 1 ? team1 : team2
-  const losingTeam = roundWinner === 1 ? team2 : team1
 
   return (
     <div className={styles.roundEndUI}>
@@ -46,9 +47,10 @@ export default function RoundEndUI({
               ))}
             </div>
             <div className={styles.score}>{team1Score}</div>
-            {roundWinner === 1 && (
-              <div className={styles.points}>+{Math.abs(roundPoints)}</div>
-            )}
+            <div className={styles.points}>
+              {team1Points >= 0 ? '+' : ''}
+              {team1Points}
+            </div>
           </div>
           <div className={styles.teamScore}>
             <div className={styles.teamName}>
@@ -60,9 +62,10 @@ export default function RoundEndUI({
               ))}
             </div>
             <div className={styles.score}>{team2Score}</div>
-            {roundWinner === 2 && (
-              <div className={styles.points}>+{Math.abs(roundPoints)}</div>
-            )}
+            <div className={styles.points}>
+              {team2Points >= 0 ? '+' : ''}
+              {team2Points}
+            </div>
           </div>
         </div>
       </div>
