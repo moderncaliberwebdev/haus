@@ -15,13 +15,6 @@ export default function Header() {
           </>
         )}
       </div>
-      <button className='hamburger' aria-label='Menu' type='button'>
-        <span />
-        <span />
-        <span />
-      </button>
     </header>
   )
 }
-
-

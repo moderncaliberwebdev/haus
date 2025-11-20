@@ -1,8 +1,8 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useMemo, useState, useRef } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { ref, get, update, onValue } from 'firebase/database'
+import { ref, get, update, onValue, remove } from 'firebase/database'
 import { db } from '../../lib/firebase'
 import styles from './page.module.scss'
 import { getCardImagePath, type Card, handleDeal } from '../../lib/dealLogic'
@@ -67,7 +67,10 @@ import { getTeamForPlayer } from '../../lib/teamLogic'
 
 export default function GamePage() {
   const params = useParams()
+  const router = useRouter()
   const gameCode = params?.gameCode as string
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
   const [players, setPlayers] = useState<Player[]>([])
   const [currentPlayerKey, setCurrentPlayerKey] = useState<string>('')
   const [currentPlayerNickname, setCurrentPlayerNickname] = useState<string>('')
@@ -484,6 +487,46 @@ export default function GamePage() {
     await resetForNewRound(gameCode, nextDealerIndex, players)
   }
 
+  // Handle leave game
+  const handleLeaveGame = async () => {
+    if (!gameCode) return
+
+    try {
+      // Delete the game from Firebase
+      const gameRef = ref(db, `games/${gameCode}`)
+      await remove(gameRef)
+
+      // Clear localStorage
+      localStorage.removeItem('activeGameCode')
+      localStorage.removeItem('activeGameRole')
+      localStorage.removeItem('activeGameStatus')
+      localStorage.removeItem(`playerKey_${gameCode}`)
+      localStorage.removeItem(`nickname_${gameCode}`)
+
+      // Navigate to home page
+      router.push('/')
+    } catch (error) {
+      console.error('Error leaving game:', error)
+    }
+  }
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [menuOpen])
+
   // If no players, redirect back
   if (players.length === 0) {
     return (
@@ -495,6 +538,37 @@ export default function GamePage() {
 
   return (
     <main className={styles.main}>
+      {/* Hamburger Menu */}
+      <div className={styles.menuContainer} ref={menuRef}>
+        <button
+          className={styles.menuButton}
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label='Menu'
+        >
+          <svg
+            width='24'
+            height='24'
+            viewBox='0 0 24 24'
+            fill='none'
+            stroke='currentColor'
+            strokeWidth='2'
+            strokeLinecap='round'
+            strokeLinejoin='round'
+          >
+            <line x1='3' y1='6' x2='21' y2='6'></line>
+            <line x1='3' y1='12' x2='21' y2='12'></line>
+            <line x1='3' y1='18' x2='21' y2='18'></line>
+          </svg>
+        </button>
+        {menuOpen && (
+          <div className={styles.menuDropdown}>
+            <button className={styles.menuItem} onClick={handleLeaveGame}>
+              Leave Game
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className={styles.gameContainer}>
         {/* Row 1: Top Player */}
         <div className={styles.row1}>
