@@ -3,7 +3,7 @@
 
 .trumpSelectionBox {
   position: absolute;
-  top: 50%;
+  top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
   background-color: $secondary;
@@ -13,6 +13,10 @@
   z-index: 1000;
   width: 100%;
   max-width: 500px;
+
+  @include respond(phone) {
+    top: 25%;
+  }
 }
 
 .trumpQuestion {
@@ -58,7 +62,7 @@
 }
 
 .suitIcon {
-  font-size: $font-massive-head;
+  font-size: $font-med-head;
   line-height: 1;
 }
 
