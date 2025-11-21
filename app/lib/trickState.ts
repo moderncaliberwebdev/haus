@@ -54,7 +54,10 @@ export async function submitCardPlay(
   const activePlayerCount = players.filter(
     (p) => p.key !== sittingOutPlayerKey
   ).length
+  console.log('activePlayerCount', activePlayerCount)
+
   const trickComplete = isTrickComplete(updatedTrick, activePlayerCount)
+  console.log('trickComplete', trickComplete)
 
   if (trickComplete) {
     // Determine winner
@@ -63,6 +66,7 @@ export async function submitCardPlay(
       trump,
       players
     )
+    console.log('finalTrick', finalTrick)
 
     // Ensure final trick is properly serialized for Firebase
     const finalTrickForFirebase = {
@@ -81,13 +85,13 @@ export async function submitCardPlay(
     // Update currentTrick with the final trick (so UI can show winner)
     // Set currentPlayer to null to pause play during winner display
     await update(gameRef, {
-      currentTrick: finalTrickForFirebase,
+      currentTrick: finalTrick,
       currentPlayer: null, // Pause play to show winner
       [`hands/${playerIndex}`]: handObject,
     })
 
     // Add completed trick to tricks array
-    await push(tricksRef, finalTrickForFirebase)
+    await push(tricksRef, finalTrick)
 
     // Check if all tricks are complete
     const tricksSnap = await get(tricksRef)
@@ -129,7 +133,7 @@ export async function submitCardPlay(
 
     // Update trick and move to next player
     await update(gameRef, {
-      currentTrick: trickForFirebase,
+      currentTrick: updatedTrick,
       currentPlayer: nextPlayer,
       [`hands/${playerIndex}`]: handObject,
     })

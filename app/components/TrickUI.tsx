@@ -127,7 +127,7 @@ export default function TrickUI({
             currentTrick.winnerPlayerKey && (
               <div className={styles.trickWinner}>
                 {getPlayerForCard(currentTrick.winnerPlayerKey)?.nickname} wins
-                the trick!
+                the hand!
               </div>
             )}
         </div>

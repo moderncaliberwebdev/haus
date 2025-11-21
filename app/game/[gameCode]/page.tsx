@@ -430,12 +430,7 @@ export default function GamePage() {
 
   // Show round end UI and reset after 3 seconds
   useEffect(() => {
-    if (
-      gamePhase === 'scoring' &&
-      roundWinner &&
-      team1Points !== null &&
-      team2Points !== null
-    ) {
+    if (gamePhase === 'scoring' && roundWinner) {
       const timer = setTimeout(async () => {
         // Check for game win
         const gameWinner = checkGameWin(team1Score, team2Score)
@@ -480,12 +475,6 @@ export default function GamePage() {
   const gameWinner = useMemo(() => {
     return checkGameWin(team1Score, team2Score)
   }, [team1Score, team2Score])
-
-  // Handle play again
-  const handlePlayAgain = async () => {
-    const nextDealerIndex = getNextDealerIndex(dealerIndex)
-    await resetForNewRound(gameCode, nextDealerIndex, players)
-  }
 
   // Handle leave game
   const handleLeaveGame = async () => {
@@ -805,6 +794,12 @@ export default function GamePage() {
                 hand={currentPlayerHand}
                 exchangeData={cardExchangeState || {}}
                 onSelectCards={handleCardExchange}
+                winningBid={
+                  typeof winningBid === 'number'
+                    ? String(winningBid)
+                    : winningBid
+                }
+                trump={trump as Suit | null}
               />
             )}
         </div>
@@ -906,19 +901,16 @@ export default function GamePage() {
       )}
 
       {/* Round End UI - Show after scoring */}
-      {gamePhase === 'scoring' &&
-        roundWinner &&
-        team1Points !== null &&
-        team2Points !== null && (
-          <RoundEndUI
-            roundWinner={roundWinner}
-            team1Score={team1Score}
-            team2Score={team2Score}
-            team1Points={team1Points}
-            team2Points={team2Points}
-            players={players}
-          />
-        )}
+      {gamePhase === 'scoring' && roundWinner && (
+        <RoundEndUI
+          roundWinner={roundWinner}
+          team1Score={team1Score}
+          team2Score={team2Score}
+          team1Points={team1Points || 0}
+          team2Points={team2Points || 0}
+          players={players}
+        />
+      )}
 
       {/* Game Win UI - Show when a team reaches 64 points */}
       {gameWinner && (
@@ -927,8 +919,7 @@ export default function GamePage() {
           team1Score={team1Score}
           team2Score={team2Score}
           players={players}
-          gameCode={gameCode}
-          onPlayAgain={handlePlayAgain}
+          leaveGame={handleLeaveGame}
         />
       )}
     </main>

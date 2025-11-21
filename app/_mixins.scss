@@ -18,7 +18,7 @@ $breakpoint argument choices:
     }
   }
   @if $breakpoint == small {
-    @media (max-width: 500px) {
+    @media (max-width: 400px) {
       @content;
     }
   }
@@ -28,7 +28,7 @@ $breakpoint argument choices:
     }
   }
   @if $breakpoint == tab-port {
-    @media (max-width: 900px) {
+    @media (max-width: 800px) {
       @content;
     }
   }

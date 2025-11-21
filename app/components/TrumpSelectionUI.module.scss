@@ -1,6 +1,11 @@
 @import '../_variables.scss';
+@import '../_mixins.scss';
 
 .trumpSelectionBox {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background-color: $secondary;
   padding: 2rem 3rem;
   border-radius: 1rem;
@@ -97,9 +102,9 @@
 
 .waitingBox {
   position: absolute;
-  bottom: 25vh;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   background-color: rgba(186, 123, 161, 0.9);
   padding: 2rem 3rem;
   border-radius: 1rem;
@@ -107,6 +112,10 @@
   z-index: 1000;
   width: 100%;
   max-width: 500px;
+
+  @include respond(phone) {
+    padding: 1rem;
+  }
 }
 
 .waitingText {

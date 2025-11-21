@@ -1,4 +1,5 @@
 @import '../_variables.scss';
+@import '../_mixins.scss';
 
 .scoreDisplay {
   position: fixed;
@@ -10,8 +11,17 @@
   z-index: 1000;
   background: #fff;
   padding: 1rem;
-
   border-radius: 20px;
+
+  @include respond(phone) {
+    position: relative;
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    bottom: auto;
+    right: auto;
+    justify-content: center;
+  }
 }
 
 .teamScore {

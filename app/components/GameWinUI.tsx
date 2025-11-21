@@ -9,8 +9,7 @@ interface GameWinUIProps {
   team1Score: number
   team2Score: number
   players: Player[]
-  gameCode: string
-  onPlayAgain: () => void
+  leaveGame: () => void
 }
 
 export default function GameWinUI({
@@ -18,16 +17,11 @@ export default function GameWinUI({
   team1Score,
   team2Score,
   players,
-  gameCode,
-  onPlayAgain,
+  leaveGame,
 }: GameWinUIProps) {
   const router = useRouter()
   const { team1, team2 } = createTeams(players, [team1Score, team2Score])
   const winningTeamData = winningTeam === 1 ? team1 : team2
-
-  const handleLeaveGame = () => {
-    router.push('/')
-  }
 
   return (
     <div className={styles.gameWinUI}>
@@ -67,10 +61,7 @@ export default function GameWinUI({
           </div>
         </div>
         <div className={styles.actions}>
-          <button className={styles.playAgainButton} onClick={onPlayAgain}>
-            Play Again
-          </button>
-          <button className={styles.leaveButton} onClick={handleLeaveGame}>
+          <button className={styles.leaveButton} onClick={leaveGame}>
             Leave Game
           </button>
         </div>
@@ -78,4 +69,3 @@ export default function GameWinUI({
     </div>
   )
 }
-

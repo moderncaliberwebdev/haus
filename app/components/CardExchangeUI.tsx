@@ -1,12 +1,14 @@
 'use client'
 import { useState } from 'react'
-import { type Card } from '../lib/dealLogic'
+import { type Card, type Suit } from '../lib/dealLogic'
 import { type Player } from '../lib/gameStart'
 import {
   getBiddingWinnerPartner,
   validateCardSelection,
 } from '../lib/specialBidLogic'
 import { getCardImagePath } from '../lib/dealLogic'
+import { getSuitDisplayName } from '../lib/trumpSelection'
+import { getBidDisplayText } from '../lib/biddingLogic'
 import WaitingBox from './WaitingBox'
 import styles from './CardExchangeUI.module.scss'
 
@@ -17,6 +19,8 @@ interface CardExchangeUIProps {
   hand: Card[]
   exchangeData: any
   onSelectCards: (cards: Card[]) => void
+  winningBid: string | null
+  trump: Suit | null
 }
 
 export default function CardExchangeUI({
@@ -26,6 +30,8 @@ export default function CardExchangeUI({
   hand,
   exchangeData,
   onSelectCards,
+  winningBid,
+  trump,
 }: CardExchangeUIProps) {
   const [selectedCards, setSelectedCards] = useState<Card[]>([])
 
@@ -108,6 +114,20 @@ export default function CardExchangeUI({
         <div className={styles.receivedCardsInfo}>
           You received {receivedCards.length} card
           {receivedCards.length !== 1 ? 's' : ''} from your partner
+        </div>
+      )}
+
+      {/* Show trump information for partner */}
+      {isPartner && winningBid && (
+        <div className={styles.trumpInfo}>
+          <div className={styles.trumpLabel}>Trump:</div>
+          <div className={styles.trumpValue}>
+            {winningBid === 'ace-haus'
+              ? 'Aces (No Trump)'
+              : trump
+              ? getSuitDisplayName(trump)
+              : 'Not selected yet'}
+          </div>
         </div>
       )}
 
