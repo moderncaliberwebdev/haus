@@ -235,7 +235,16 @@ export function useLobbyLogic() {
 
   async function joinGame() {
     if (!joinCode || !nickname) return
-    const playersSnap = await get(ref(db, `games/${joinCode}/players`))
+    const trimmedCode = joinCode.trim().toUpperCase()
+    const gameRef = ref(db, `games/${trimmedCode}`)
+    const gameSnap = await get(gameRef)
+    if (!gameSnap.exists()) {
+      setJoinError('No game found with that code.')
+      return
+    }
+
+    const playersRef = ref(db, `games/${trimmedCode}/players`)
+    const playersSnap = await get(playersRef)
     const players = playersSnap.val() || {}
     const playersList = Object.values(players) as { nickname?: string }[]
     if (playersList.length >= 3) {
@@ -252,26 +261,25 @@ export function useLobbyLogic() {
       setJoinError('Someone else is already using that nickname.')
       return
     }
-    const listRef = ref(db, `games/${joinCode}/players`)
-    const newRef = push(listRef)
+    const newRef = push(playersRef)
     const playerKey = newRef.key || ''
     await set(newRef, { nickname, joinedAt: serverTimestamp() })
     setPlayerKey(playerKey)
     // Store in localStorage for game page and rejoin
     if (playerKey) {
-      localStorage.setItem(`playerKey_${joinCode}`, playerKey)
-      localStorage.setItem(`nickname_${joinCode}`, nickname)
+      localStorage.setItem(`playerKey_${trimmedCode}`, playerKey)
+      localStorage.setItem(`nickname_${trimmedCode}`, nickname)
     }
     // Store active game info for rejoin
-    localStorage.setItem('activeGameCode', joinCode)
+    localStorage.setItem('activeGameCode', trimmedCode)
     localStorage.setItem('activeGameRole', 'joiner')
     // Check current game status
-    const gameRef = ref(db, `games/${joinCode}`)
-    const gameSnap = await get(gameRef)
     const gameData = gameSnap.val()
     const gameStatus = gameData?.status || 'lobby'
     localStorage.setItem('activeGameStatus', gameStatus)
 
+    // ensure state reflects normalized code
+    setJoinCode(trimmedCode)
     setHasJoined(true)
     setJoinError('')
   }
